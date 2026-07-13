@@ -1,0 +1,300 @@
+[2026-07-12T13:29:02.256Z] info  code-server 4.127.0 1e6ed874e3138141a5636f6e0dbe8570aa6cd001
+[2026-07-12T13:29:02.264Z] info  Using user-data-dir /data/data/com.termux/files/home/.local/share/code-server
+[2026-07-12T13:29:02.349Z] info  Using config file /data/data/com.termux/files/home/.config/code-server/config.yaml
+[2026-07-12T13:29:02.349Z] info  HTTP server listening on http://0.0.0.0:8085/
+[2026-07-12T13:29:02.350Z] info    - Authentication is disabled
+[2026-07-12T13:29:02.350Z] info    - Not serving HTTPS
+[2026-07-12T13:29:02.351Z] info  Session server listening on /data/data/com.termux/files/home/.local/share/code-server/code-server-ipc.sock
+[16:29:04] 
+
+
+
+
+[16:29:04] Error: Unable to retrieve mac address (unexpected format)
+    at tO (file:///data/data/com.termux/files/usr/lib/code-server/lib/vscode/out/server-main.js:486:34780)
+    at rH (file:///data/data/com.termux/files/usr/lib/code-server/lib/vscode/out/server-main.js:486:35104)
+    at async file:///data/data/com.termux/files/usr/lib/code-server/lib/vscode/out/server-main.js:486:35023
+    at async Promise.all (index 2)
+    at async X4 (file:///data/data/com.termux/files/usr/lib/code-server/lib/vscode/out/server-main.js:614:407)
+    at async s5 (file:///data/data/com.termux/files/usr/lib/code-server/lib/vscode/out/server-main.js:615:1371)
+[16:29:04] Error: Unsupported platform
+    at Object.<anonymous> (/data/data/com.termux/files/usr/lib/code-server/lib/vscode/node_modules/@vscode/deviceid/dist/index.js:25:11)
+    at Module._compile (node:internal/modules/cjs/loader:1854:14)
+    at Module._extensions..js (node:internal/modules/cjs/loader:1985:10)
+    at Module.load (node:internal/modules/cjs/loader:1577:32)
+    at Module._load (node:internal/modules/cjs/loader:1379:12)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:255:19)
+    at loadCJSModuleWithModuleLoad (node:internal/modules/esm/translators:326:3)
+    at ModuleWrap.<anonymous> (node:internal/modules/esm/translators:231:7)
+    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:633:26)
+    at async iO (file:///data/data/com.termux/files/usr/lib/code-server/lib/vscode/out/server-main.js:486:35407)
+    at async Promise.all (index 4)
+    at async X4 (file:///data/data/com.termux/files/usr/lib/code-server/lib/vscode/out/server-main.js:614:407)
+    at async s5 (file:///data/data/com.termux/files/usr/lib/code-server/lib/vscode/out/server-main.js:615:1371)
+[reconnection-grace-time] No CLI argument provided, using default: 10800000ms (10800s)
+[16:29:04] [AgentHostChannel] Registered unavailable IPC channel 'agentHostProxy': no --agent-host-bridge-port / --agent-host-bridge-path set.
+[16:29:04] Extension host agent started.
+(node:19914) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+File not found: /data/data/com.termux/files/usr/lib/code-server/lib/vscode/node_modules/vsda/rust/web/vsda_bg.wasm
+File not found: /data/data/com.termux/files/usr/lib/code-server/lib/vscode/node_modules/vsda/rust/web/vsda.js
+[16:29:07] [192.168.18.33][158616c2][ManagementConnection] New connection established.
+[16:29:09] [192.168.18.33][f5ff8510][ExtensionHostConnection] New connection established.
+[16:29:09] [192.168.18.33][f5ff8510][ExtensionHostConnection] Starting extension host process...
+[16:29:11] [192.168.18.33][f5ff8510][ExtensionHostConnection] <20077> Launched Extension Host Process.
+[16:29:13] [192.168.18.33][f5ff8510][ExtensionHostConnection] <20077> [reconnection-grace-time] Extension host: read VSCODE_RECONNECTION_GRACE_TIME=10800000ms (10800s)
+
+[16:29:25] [192.168.18.33][158616c2][ManagementConnection] The client has disconnected gracefully, so the connection will be disposed.
+[16:29:26] [192.168.18.33][f5ff8510][ExtensionHostConnection] <20077> Extension Host Process exited with code: 0, signal: null.
+File not found: /data/data/com.termux/files/usr/lib/code-server/lib/vscode/node_modules/vsda/rust/web/vsda_bg.wasm
+File not found: /data/data/com.termux/files/usr/lib/code-server/lib/vscode/node_modules/vsda/rust/web/vsda.js
+[16:29:26] [192.168.18.33][a65cd293][ManagementConnection] New connection established.
+[16:29:29] [192.168.18.33][91fde856][ExtensionHostConnection] New connection established.
+[16:29:29] [192.168.18.33][91fde856][ExtensionHostConnection] Starting extension host process...
+[16:29:29] [192.168.18.33][91fde856][ExtensionHostConnection] <20302> Launched Extension Host Process.
+[16:29:32] [192.168.18.33][91fde856][ExtensionHostConnection] <20302> [reconnection-grace-time] Extension host: read VSCODE_RECONNECTION_GRACE_TIME=10800000ms (10800s)
+
+[2026-07-12T13:32:12.773Z] info  code-server 4.127.0 1e6ed874e3138141a5636f6e0dbe8570aa6cd001
+[2026-07-12T13:32:12.782Z] info  Using user-data-dir /data/data/com.termux/files/home/.local/share/code-server
+[2026-07-12T13:32:12.870Z] info  Using config file /data/data/com.termux/files/home/.config/code-server/config.yaml
+[2026-07-12T13:32:12.871Z] info  HTTP server listening on http://0.0.0.0:8085/
+[2026-07-12T13:32:12.871Z] info    - Authentication is disabled
+[2026-07-12T13:32:12.871Z] info    - Not serving HTTPS
+[2026-07-12T13:32:12.872Z] info  Session server listening on /data/data/com.termux/files/home/.local/share/code-server/code-server-ipc.sock
+[16:32:15] 
+
+
+
+
+[16:32:15] Error: Unable to retrieve mac address (unexpected format)
+    at tO (file:///data/data/com.termux/files/usr/lib/code-server/lib/vscode/out/server-main.js:486:34780)
+    at rH (file:///data/data/com.termux/files/usr/lib/code-server/lib/vscode/out/server-main.js:486:35104)
+    at async file:///data/data/com.termux/files/usr/lib/code-server/lib/vscode/out/server-main.js:486:35023
+    at async Promise.all (index 2)
+    at async X4 (file:///data/data/com.termux/files/usr/lib/code-server/lib/vscode/out/server-main.js:614:407)
+    at async s5 (file:///data/data/com.termux/files/usr/lib/code-server/lib/vscode/out/server-main.js:615:1371)
+[16:32:15] Error: Unsupported platform
+    at Object.<anonymous> (/data/data/com.termux/files/usr/lib/code-server/lib/vscode/node_modules/@vscode/deviceid/dist/index.js:25:11)
+    at Module._compile (node:internal/modules/cjs/loader:1854:14)
+    at Module._extensions..js (node:internal/modules/cjs/loader:1985:10)
+    at Module.load (node:internal/modules/cjs/loader:1577:32)
+    at Module._load (node:internal/modules/cjs/loader:1379:12)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:255:19)
+    at loadCJSModuleWithModuleLoad (node:internal/modules/esm/translators:326:3)
+    at ModuleWrap.<anonymous> (node:internal/modules/esm/translators:231:7)
+    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:633:26)
+    at async iO (file:///data/data/com.termux/files/usr/lib/code-server/lib/vscode/out/server-main.js:486:35407)
+    at async Promise.all (index 4)
+    at async X4 (file:///data/data/com.termux/files/usr/lib/code-server/lib/vscode/out/server-main.js:614:407)
+    at async s5 (file:///data/data/com.termux/files/usr/lib/code-server/lib/vscode/out/server-main.js:615:1371)
+[reconnection-grace-time] No CLI argument provided, using default: 10800000ms (10800s)
+[16:32:15] [AgentHostChannel] Registered unavailable IPC channel 'agentHostProxy': no --agent-host-bridge-port / --agent-host-bridge-path set.
+[16:32:15] Extension host agent started.
+(node:20457) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+File not found: /data/data/com.termux/files/usr/lib/code-server/lib/vscode/node_modules/vsda/rust/web/vsda_bg.wasm
+File not found: /data/data/com.termux/files/usr/lib/code-server/lib/vscode/node_modules/vsda/rust/web/vsda.js
+[16:32:18] [192.168.18.33][f85faa39][ManagementConnection] New connection established.
+[16:32:20] [192.168.18.33][22f789a0][ExtensionHostConnection] New connection established.
+[16:32:20] [192.168.18.33][22f789a0][ExtensionHostConnection] Starting extension host process...
+[16:32:22] [192.168.18.33][22f789a0][ExtensionHostConnection] <20624> Launched Extension Host Process.
+[16:32:25] [192.168.18.33][22f789a0][ExtensionHostConnection] <20624> [reconnection-grace-time] Extension host: read VSCODE_RECONNECTION_GRACE_TIME=10800000ms (10800s)
+
+[2026-07-12T13:33:43.298Z] info  code-server 4.127.0 1e6ed874e3138141a5636f6e0dbe8570aa6cd001
+[2026-07-12T13:33:43.306Z] info  Using user-data-dir /data/data/com.termux/files/home/.local/share/code-server
+[2026-07-12T13:33:43.389Z] info  Using config file /data/data/com.termux/files/home/.config/code-server/config.yaml
+[2026-07-12T13:33:43.390Z] info  HTTP server listening on http://0.0.0.0:8085/
+[2026-07-12T13:33:43.390Z] info    - Authentication is disabled
+[2026-07-12T13:33:43.391Z] info    - Not serving HTTPS
+[2026-07-12T13:33:43.391Z] info  Session server listening on /data/data/com.termux/files/home/.local/share/code-server/code-server-ipc.sock
+[16:33:46] 
+
+
+
+
+[16:33:46] Error: Unable to retrieve mac address (unexpected format)
+    at tO (file:///data/data/com.termux/files/usr/lib/code-server/lib/vscode/out/server-main.js:486:34780)
+    at rH (file:///data/data/com.termux/files/usr/lib/code-server/lib/vscode/out/server-main.js:486:35104)
+    at async file:///data/data/com.termux/files/usr/lib/code-server/lib/vscode/out/server-main.js:486:35023
+    at async Promise.all (index 2)
+    at async X4 (file:///data/data/com.termux/files/usr/lib/code-server/lib/vscode/out/server-main.js:614:407)
+    at async s5 (file:///data/data/com.termux/files/usr/lib/code-server/lib/vscode/out/server-main.js:615:1371)
+[16:33:46] Error: Unsupported platform
+    at Object.<anonymous> (/data/data/com.termux/files/usr/lib/code-server/lib/vscode/node_modules/@vscode/deviceid/dist/index.js:25:11)
+    at Module._compile (node:internal/modules/cjs/loader:1854:14)
+    at Module._extensions..js (node:internal/modules/cjs/loader:1985:10)
+    at Module.load (node:internal/modules/cjs/loader:1577:32)
+    at Module._load (node:internal/modules/cjs/loader:1379:12)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:255:19)
+    at loadCJSModuleWithModuleLoad (node:internal/modules/esm/translators:326:3)
+    at ModuleWrap.<anonymous> (node:internal/modules/esm/translators:231:7)
+    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:633:26)
+    at async iO (file:///data/data/com.termux/files/usr/lib/code-server/lib/vscode/out/server-main.js:486:35407)
+    at async Promise.all (index 4)
+    at async X4 (file:///data/data/com.termux/files/usr/lib/code-server/lib/vscode/out/server-main.js:614:407)
+    at async s5 (file:///data/data/com.termux/files/usr/lib/code-server/lib/vscode/out/server-main.js:615:1371)
+[reconnection-grace-time] No CLI argument provided, using default: 10800000ms (10800s)
+[16:33:46] [AgentHostChannel] Registered unavailable IPC channel 'agentHostProxy': no --agent-host-bridge-port / --agent-host-bridge-path set.
+[16:33:46] Extension host agent started.
+(node:20868) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+File not found: /data/data/com.termux/files/usr/lib/code-server/lib/vscode/node_modules/vsda/rust/web/vsda_bg.wasm
+File not found: /data/data/com.termux/files/usr/lib/code-server/lib/vscode/node_modules/vsda/rust/web/vsda.js
+[16:33:48] [192.168.18.33][5a5d28ce][ManagementConnection] New connection established.
+[16:33:51] [192.168.18.33][4feca631][ExtensionHostConnection] New connection established.
+[16:33:51] [192.168.18.33][4feca631][ExtensionHostConnection] Starting extension host process...
+[16:33:53] [192.168.18.33][4feca631][ExtensionHostConnection] <21032> Launched Extension Host Process.
+[16:33:53] [File Watcher (universal)] restarting watcher after unexpected error: terminated by itself with code null, signal: SIGTERM (ETERM)
+[16:33:53] [192.168.18.33][4feca631][ExtensionHostConnection] <21032> Extension Host Process exited with code: null, signal: SIGTERM.
+a socket was left hanging
+[2026-07-12T13:34:26.784Z] info  code-server 4.127.0 1e6ed874e3138141a5636f6e0dbe8570aa6cd001
+[2026-07-12T13:34:26.793Z] info  Using user-data-dir /data/data/com.termux/files/home/.local/share/code-server
+[2026-07-12T13:34:26.881Z] info  Using config file /data/data/com.termux/files/home/.config/code-server/config.yaml
+[2026-07-12T13:34:26.881Z] info  HTTP server listening on http://0.0.0.0:8085/
+[2026-07-12T13:34:26.882Z] info    - Authentication is disabled
+[2026-07-12T13:34:26.883Z] info    - Not serving HTTPS
+[2026-07-12T13:34:26.883Z] info  Session server listening on /data/data/com.termux/files/home/.local/share/code-server/code-server-ipc.sock
+[2026-07-12T13:34:39.336Z] info  code-server 4.127.0 1e6ed874e3138141a5636f6e0dbe8570aa6cd001
+[2026-07-12T13:34:39.345Z] info  Using user-data-dir /data/data/com.termux/files/home/.local/share/code-server
+[2026-07-12T13:34:39.430Z] info  Using config file /data/data/com.termux/files/home/.config/code-server/config.yaml
+[2026-07-12T13:34:39.430Z] info  HTTP server listening on http://0.0.0.0:8085/
+[2026-07-12T13:34:39.431Z] info    - Authentication is disabled
+[2026-07-12T13:34:39.431Z] info    - Not serving HTTPS
+[2026-07-12T13:34:39.432Z] info  Session server listening on /data/data/com.termux/files/home/.local/share/code-server/code-server-ipc.sock
+[16:34:40] 
+
+
+
+
+[16:34:41] Error: Unable to retrieve mac address (unexpected format)
+    at tO (file:///data/data/com.termux/files/usr/lib/code-server/lib/vscode/out/server-main.js:486:34780)
+    at rH (file:///data/data/com.termux/files/usr/lib/code-server/lib/vscode/out/server-main.js:486:35104)
+    at async file:///data/data/com.termux/files/usr/lib/code-server/lib/vscode/out/server-main.js:486:35023
+    at async Promise.all (index 2)
+    at async X4 (file:///data/data/com.termux/files/usr/lib/code-server/lib/vscode/out/server-main.js:614:407)
+    at async s5 (file:///data/data/com.termux/files/usr/lib/code-server/lib/vscode/out/server-main.js:615:1371)
+[16:34:41] Error: Unsupported platform
+    at Object.<anonymous> (/data/data/com.termux/files/usr/lib/code-server/lib/vscode/node_modules/@vscode/deviceid/dist/index.js:25:11)
+    at Module._compile (node:internal/modules/cjs/loader:1854:14)
+    at Module._extensions..js (node:internal/modules/cjs/loader:1985:10)
+    at Module.load (node:internal/modules/cjs/loader:1577:32)
+    at Module._load (node:internal/modules/cjs/loader:1379:12)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:255:19)
+    at loadCJSModuleWithModuleLoad (node:internal/modules/esm/translators:326:3)
+    at ModuleWrap.<anonymous> (node:internal/modules/esm/translators:231:7)
+    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:633:26)
+    at async iO (file:///data/data/com.termux/files/usr/lib/code-server/lib/vscode/out/server-main.js:486:35407)
+    at async Promise.all (index 4)
+    at async X4 (file:///data/data/com.termux/files/usr/lib/code-server/lib/vscode/out/server-main.js:614:407)
+    at async s5 (file:///data/data/com.termux/files/usr/lib/code-server/lib/vscode/out/server-main.js:615:1371)
+[reconnection-grace-time] No CLI argument provided, using default: 10800000ms (10800s)
+[16:34:41] [AgentHostChannel] Registered unavailable IPC channel 'agentHostProxy': no --agent-host-bridge-port / --agent-host-bridge-path set.
+[16:34:41] Extension host agent started.
+(node:21111) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+File not found: /data/data/com.termux/files/usr/lib/code-server/lib/vscode/node_modules/vsda/rust/web/vsda_bg.wasm
+File not found: /data/data/com.termux/files/usr/lib/code-server/lib/vscode/node_modules/vsda/rust/web/vsda.js
+[16:34:43] [192.168.18.33][ee7a5eb4][ManagementConnection] New connection established.
+[16:34:46] [192.168.18.33][86ce8e0f][ExtensionHostConnection] New connection established.
+[16:34:46] [192.168.18.33][86ce8e0f][ExtensionHostConnection] Starting extension host process...
+[16:34:47] [192.168.18.33][86ce8e0f][ExtensionHostConnection] <21275> Launched Extension Host Process.
+[16:34:50] [192.168.18.33][86ce8e0f][ExtensionHostConnection] <21275> [reconnection-grace-time] Extension host: read VSCODE_RECONNECTION_GRACE_TIME=10800000ms (10800s)
+
+[2026-07-12T13:35:46.769Z] info  code-server 4.127.0 1e6ed874e3138141a5636f6e0dbe8570aa6cd001
+[2026-07-12T13:35:46.777Z] info  Using user-data-dir /data/data/com.termux/files/home/.local/share/code-server
+[2026-07-12T13:35:46.865Z] info  Using config file /data/data/com.termux/files/home/.config/code-server/config.yaml
+[2026-07-12T13:35:46.866Z] info  HTTP server listening on http://0.0.0.0:8085/
+[2026-07-12T13:35:46.867Z] info    - Authentication is disabled
+[2026-07-12T13:35:46.867Z] info    - Not serving HTTPS
+[2026-07-12T13:35:46.867Z] info  Session server listening on /data/data/com.termux/files/home/.local/share/code-server/code-server-ipc.sock
+[16:35:48] 
+
+
+
+
+[16:35:48] Error: Unable to retrieve mac address (unexpected format)
+    at tO (file:///data/data/com.termux/files/usr/lib/code-server/lib/vscode/out/server-main.js:486:34780)
+    at rH (file:///data/data/com.termux/files/usr/lib/code-server/lib/vscode/out/server-main.js:486:35104)
+    at async file:///data/data/com.termux/files/usr/lib/code-server/lib/vscode/out/server-main.js:486:35023
+    at async Promise.all (index 2)
+    at async X4 (file:///data/data/com.termux/files/usr/lib/code-server/lib/vscode/out/server-main.js:614:407)
+    at async s5 (file:///data/data/com.termux/files/usr/lib/code-server/lib/vscode/out/server-main.js:615:1371)
+[16:35:48] Error: Unsupported platform
+    at Object.<anonymous> (/data/data/com.termux/files/usr/lib/code-server/lib/vscode/node_modules/@vscode/deviceid/dist/index.js:25:11)
+    at Module._compile (node:internal/modules/cjs/loader:1854:14)
+    at Module._extensions..js (node:internal/modules/cjs/loader:1985:10)
+    at Module.load (node:internal/modules/cjs/loader:1577:32)
+    at Module._load (node:internal/modules/cjs/loader:1379:12)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:255:19)
+    at loadCJSModuleWithModuleLoad (node:internal/modules/esm/translators:326:3)
+    at ModuleWrap.<anonymous> (node:internal/modules/esm/translators:231:7)
+    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:633:26)
+    at async iO (file:///data/data/com.termux/files/usr/lib/code-server/lib/vscode/out/server-main.js:486:35407)
+    at async Promise.all (index 4)
+    at async X4 (file:///data/data/com.termux/files/usr/lib/code-server/lib/vscode/out/server-main.js:614:407)
+    at async s5 (file:///data/data/com.termux/files/usr/lib/code-server/lib/vscode/out/server-main.js:615:1371)
+[reconnection-grace-time] No CLI argument provided, using default: 10800000ms (10800s)
+[16:35:48] [AgentHostChannel] Registered unavailable IPC channel 'agentHostProxy': no --agent-host-bridge-port / --agent-host-bridge-path set.
+[16:35:48] Extension host agent started.
+(node:21425) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+File not found: /data/data/com.termux/files/usr/lib/code-server/lib/vscode/node_modules/vsda/rust/web/vsda.js
+File not found: /data/data/com.termux/files/usr/lib/code-server/lib/vscode/node_modules/vsda/rust/web/vsda_bg.wasm
+[16:35:50] [192.168.18.33][dcfddcff][ManagementConnection] New connection established.
+[16:35:54] [192.168.18.33][79aa3155][ExtensionHostConnection] New connection established.
+[16:35:54] [192.168.18.33][79aa3155][ExtensionHostConnection] Starting extension host process...
+[16:35:55] [192.168.18.33][79aa3155][ExtensionHostConnection] <21587> Launched Extension Host Process.
+[16:35:57] [192.168.18.33][79aa3155][ExtensionHostConnection] <21587> [reconnection-grace-time] Extension host: read VSCODE_RECONNECTION_GRACE_TIME=10800000ms (10800s)
+
+[2026-07-12T13:38:21.305Z] info  code-server 4.127.0 1e6ed874e3138141a5636f6e0dbe8570aa6cd001
+[2026-07-12T13:38:21.314Z] info  Using user-data-dir /data/data/com.termux/files/home/.local/share/code-server
+[2026-07-12T13:38:21.399Z] info  Using config file /data/data/com.termux/files/home/.config/code-server/config.yaml
+[2026-07-12T13:38:21.400Z] info  HTTP server listening on http://0.0.0.0:8085/
+[2026-07-12T13:38:21.400Z] info    - Authentication is disabled
+[2026-07-12T13:38:21.401Z] info    - Not serving HTTPS
+[2026-07-12T13:38:21.401Z] info  Session server listening on /data/data/com.termux/files/home/.local/share/code-server/code-server-ipc.sock
+[16:38:40] 
+
+
+
+
+[16:38:40] Error: Unable to retrieve mac address (unexpected format)
+    at tO (file:///data/data/com.termux/files/usr/lib/code-server/lib/vscode/out/server-main.js:486:34780)
+    at rH (file:///data/data/com.termux/files/usr/lib/code-server/lib/vscode/out/server-main.js:486:35104)
+    at async file:///data/data/com.termux/files/usr/lib/code-server/lib/vscode/out/server-main.js:486:35023
+    at async Promise.all (index 2)
+    at async X4 (file:///data/data/com.termux/files/usr/lib/code-server/lib/vscode/out/server-main.js:614:407)
+    at async s5 (file:///data/data/com.termux/files/usr/lib/code-server/lib/vscode/out/server-main.js:615:1371)
+[16:38:40] Error: Unsupported platform
+    at Object.<anonymous> (/data/data/com.termux/files/usr/lib/code-server/lib/vscode/node_modules/@vscode/deviceid/dist/index.js:25:11)
+    at Module._compile (node:internal/modules/cjs/loader:1854:14)
+    at Module._extensions..js (node:internal/modules/cjs/loader:1985:10)
+    at Module.load (node:internal/modules/cjs/loader:1577:32)
+    at Module._load (node:internal/modules/cjs/loader:1379:12)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:255:19)
+    at loadCJSModuleWithModuleLoad (node:internal/modules/esm/translators:326:3)
+    at ModuleWrap.<anonymous> (node:internal/modules/esm/translators:231:7)
+    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:633:26)
+    at async iO (file:///data/data/com.termux/files/usr/lib/code-server/lib/vscode/out/server-main.js:486:35407)
+    at async Promise.all (index 4)
+    at async X4 (file:///data/data/com.termux/files/usr/lib/code-server/lib/vscode/out/server-main.js:614:407)
+    at async s5 (file:///data/data/com.termux/files/usr/lib/code-server/lib/vscode/out/server-main.js:615:1371)
+[reconnection-grace-time] No CLI argument provided, using default: 10800000ms (10800s)
+[16:38:40] [AgentHostChannel] Registered unavailable IPC channel 'agentHostProxy': no --agent-host-bridge-port / --agent-host-bridge-path set.
+[16:38:40] Extension host agent started.
+(node:22087) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+File not found: /data/data/com.termux/files/usr/lib/code-server/lib/vscode/node_modules/vsda/rust/web/vsda_bg.wasm
+File not found: /data/data/com.termux/files/usr/lib/code-server/lib/vscode/node_modules/vsda/rust/web/vsda.js
+[16:38:42] [192.168.18.33][44788214][ManagementConnection] New connection established.
+[16:38:45] [192.168.18.33][dd05a334][ExtensionHostConnection] New connection established.
+[16:38:45] [192.168.18.33][dd05a334][ExtensionHostConnection] Starting extension host process...
+[16:38:47] [192.168.18.33][dd05a334][ExtensionHostConnection] <22249> Launched Extension Host Process.
+[16:38:49] [192.168.18.33][dd05a334][ExtensionHostConnection] <22249> [reconnection-grace-time] Extension host: read VSCODE_RECONNECTION_GRACE_TIME=10800000ms (10800s)
+
