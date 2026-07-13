@@ -36,42 +36,6 @@ updateStats = async function() {
         document.getElementById('ip').innerText = d.ip;
         document.getElementById('uptime').innerText = d.uptime;
 
-        // Detail fields
-        if (d.osFull) {
-            document.getElementById('osHost').innerText = d.osFull.hostname;
-            document.getElementById('osPlatform').innerText = d.osFull.platform;
-            document.getElementById('osArch').innerText = d.osFull.arch;
-            document.getElementById('osKernel').innerText = d.osFull.release;
-        }
-        document.getElementById('ramFreeDetail').innerText = d.ramFree + ' ГБ';
-        const ramPct = parseFloat(d.ramUsed) / parseFloat(d.ramTotal) * 100;
-        document.getElementById('ramBar').style.width = Math.min(ramPct, 100) + '%';
-        // Parse disk for progress bar
-        const diskUsedNum = parseFloat(d.diskUsed);
-        const diskTotalNum = parseFloat(d.diskTotal);
-        if (!isNaN(diskUsedNum) && !isNaN(diskTotalNum) && diskTotalNum > 0) {
-            document.getElementById('diskBar').style.width = Math.min(diskUsedNum / diskTotalNum * 100, 100) + '%';
-        }
-        if (d.uptimeFull) {
-            document.getElementById('uptimeDays').innerText = d.uptimeFull.days;
-            document.getElementById('uptimeHours').innerText = d.uptimeFull.hours + ':' + String(d.uptimeFull.minutes).padStart(2, '0');
-        }
-        if (d.loadAvg) {
-            document.getElementById('loadAvg').innerText = d.loadAvg.one + ' / ' + d.loadAvg.five + ' / ' + d.loadAvg.fifteen;
-        }
-        if (d.network) {
-            const netDiv = document.getElementById('netList');
-            netDiv.innerHTML = '';
-            d.network.forEach(n => {
-                const row = document.createElement('div');
-                row.className = 'detail-row';
-                row.innerHTML = '<span class="detail-label">' + n.name + '</span><span>' + n.address + (n.internal ? ' (lo)' : '') + '</span>';
-                netDiv.appendChild(row);
-            });
-        }
-
-        loadBattery();
-
         // RAM chart
         ramHistory.push({ used: parseFloat(d.ramUsed), total: parseFloat(d.ramTotal) });
         if (ramHistory.length > 60) ramHistory.shift();
@@ -114,6 +78,7 @@ async function submitLogin() {
                 else if (id === 'links') loadLinks();
                 else if (id === 'autostart') loadBashrc();
                 else if (id === 'ide') loadProjectsForIDE();
+                else if (id === 'services') loadServices();
             }
         } else {
             document.getElementById('loginError').style.display = 'block';
@@ -134,6 +99,7 @@ function switchTab(tabId) {
     if (tabId === 'ide') loadProjectsForIDE();
     if (tabId === 'logs') loadLogs();
     if (tabId === 'autostart') loadBashrc();
+    if (tabId === 'services') loadServices();
 }
 
 async function updateStats() {
@@ -743,6 +709,178 @@ loadLogs = async function() {
     }
 };
 
+
+let lastMetricType = '';
+
+function closeMetric() {
+    document.getElementById('metricPanel').style.display = 'none';
+    document.querySelector('.file-list').style.display = '';
+    document.querySelector('.editor-zone').style.display = '';
+    document.getElementById('ramChart').style.display = 'none';
+    lastMetricType = '';
+}
+
+async function showMetric(type) {
+    lastMetricType = type;
+    document.querySelector('.file-list').style.display = 'none';
+    document.querySelector('.editor-zone').style.display = 'none';
+    const panel = document.getElementById('metricPanel');
+    panel.style.display = 'block';
+    const title = document.getElementById('metricPanelTitle');
+    const body = document.getElementById('metricPanelBody');
+    const chart = document.getElementById('ramChart');
+    chart.style.display = 'none';
+
+    const res = await authFetch('/api/stats');
+    const d = await res.json();
+
+    switch(type) {
+        case 'os':
+            title.innerText = 'ОС / Окружение';
+            body.innerHTML = '<div class="detail-row"><span class="detail-label">Хост</span><span>' + (d.osFull?.hostname || '-') + '</span></div>' +
+                '<div class="detail-row"><span class="detail-label">Платформа</span><span>' + (d.osFull?.platform || '-') + '</span></div>' +
+                '<div class="detail-row"><span class="detail-label">Архитектура</span><span>' + (d.osFull?.arch || '-') + '</span></div>' +
+                '<div class="detail-row"><span class="detail-label">Ядро</span><span>' + (d.osFull?.release || '-') + '</span></div>' +
+                '<div class="detail-row"><span class="detail-label">ОС</span><span>' + d.os + '</span></div>';
+            break;
+        case 'ram':
+            title.innerText = 'Оперативная память';
+            const ramPct = parseFloat(d.ramUsed) / parseFloat(d.ramTotal) * 100;
+            body.innerHTML = '<div class="progress-bar"><div class="progress-fill" style="width:' + Math.min(ramPct, 100) + '%"></div></div>' +
+                '<div class="detail-row"><span class="detail-label">Всего</span><span>' + d.ramTotal + ' ГБ</span></div>' +
+                '<div class="detail-row"><span class="detail-label">Использовано</span><span>' + d.ramUsed + ' ГБ</span></div>' +
+                '<div class="detail-row"><span class="detail-label">Свободно</span><span>' + d.ramFree + ' ГБ</span></div>';
+            chart.style.display = 'block';
+            chart.width = chart.clientWidth || 310;
+            chart.height = chart.clientHeight || 120;
+            setTimeout(drawRamChart, 50);
+            break;
+        case 'disk':
+            title.innerText = 'Накопитель';
+            const du = parseFloat(d.diskUsed);
+            const dt = parseFloat(d.diskTotal);
+            const diskPct = (!isNaN(du) && !isNaN(dt) && dt > 0) ? (du / dt * 100) : 0;
+            body.innerHTML = '<div class="progress-bar"><div class="progress-fill disk-fill" style="width:' + Math.min(diskPct, 100) + '%"></div></div>' +
+                '<div class="detail-row"><span class="detail-label">Всего</span><span>' + d.diskTotal + '</span></div>' +
+                '<div class="detail-row"><span class="detail-label">Использовано</span><span>' + d.diskUsed + '</span></div>';
+            break;
+        case 'net':
+            title.innerText = 'Сетевые интерфейсы';
+            let netHtml = '';
+            if (d.network) {
+                d.network.forEach(function(n) {
+                    netHtml += '<div class="detail-row"><span class="detail-label">' + n.name + '</span><span>' + n.address + (n.internal ? ' (внутренний)' : '') + '</span></div>';
+                });
+            }
+            body.innerHTML = netHtml || '<div class="detail-row"><span class="detail-label">Нет данных</span></div>';
+            break;
+        case 'uptime':
+            title.innerText = 'Время работы';
+            const u = d.uptimeFull || {};
+            body.innerHTML = '<div class="detail-row"><span class="detail-label">Дней</span><span>' + (u.days || 0) + '</span></div>' +
+                '<div class="detail-row"><span class="detail-label">Часов</span><span>' + (u.hours || 0) + '</span></div>' +
+                '<div class="detail-row"><span class="detail-label">Минут</span><span>' + (u.minutes || 0) + '</span></div>' +
+                '<div class="detail-row"><span class="detail-label">Нагрузка (1/5/15)</span><span>' + (d.loadAvg ? d.loadAvg.one + ' / ' + d.loadAvg.five + ' / ' + d.loadAvg.fifteen : '-') + '</span></div>';
+            break;
+        case 'battery':
+            title.innerText = 'Батарея';
+            const batRes = await authFetch('/api/battery');
+            const b = await batRes.json();
+            if (b.percentage !== undefined) {
+                body.innerHTML = '<div class="detail-row"><span class="detail-label">Заряд</span><span>' + b.percentage + '%</span></div>' +
+                    '<div class="detail-row"><span class="detail-label">Статус</span><span>' + (b.status === 'CHARGING' ? '⚡ Заряжается' : '🔋 Разряжается') + '</span></div>' +
+                    '<div class="detail-row"><span class="detail-label">Температура</span><span>' + (b.temperature || '-') + '°C</span></div>' +
+                    '<div class="detail-row"><span class="detail-label">Вольтаж</span><span>' + (b.voltage ? (b.voltage/1000).toFixed(3) + 'V' : '-') + '</span></div>' +
+                    '<div class="detail-row"><span class="detail-label">Здоровье</span><span>' + (b.health || '-') + '</span></div>' +
+                    '<div class="detail-row"><span class="detail-label">Циклы</span><span>' + (b.cycle || '-') + '</span></div>';
+            }
+            break;
+    }
+}
+
+function updateTermPrompt() {
+    var prompt = document.getElementById('termPrompt');
+    if (prompt) {
+        var p = currentPath || '/data/data/com.termux/files/home';
+        prompt.textContent = (p === '/data/data/com.termux/files/home' ? '~' : p.replace('/data/data/com.termux/files/home/', '~/')) + '$';
+    }
+}
+
+
+// --- Service Management ---
+
+async function loadServices() {
+    try {
+        const res = await authFetch('/api/services');
+        const services = await res.json();
+        const container = document.getElementById('servicesContainer');
+        container.innerHTML = '';
+        services.forEach(s => {
+            const card = document.createElement('div');
+            card.className = 'card';
+            card.style.padding = '20px';
+            const statusColor = s.running ? '#04d361' : '#e53e3e';
+            const statusText = s.running ? 'Работает' : 'Остановлена';
+            const btnAction = s.running ? 'stop' : 'start';
+            const btnLabel = s.running ? '\u23f9 Остановить' : '\u25b6 Запустить';
+            const btnClass = s.running ? 'btn-stop' : 'btn-start';
+            card.innerHTML = `
+                <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px">
+                    <div>
+                        <h3 style="margin:0">${s.icon} ${s.label}</h3>
+                        <p style="margin:4px 0 0;font-size:13px;color:var(--text-secondary)">${s.desc}</p>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:8px">
+                        <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${statusColor}"></span>
+                        <span style="font-size:13px;font-weight:bold;color:${statusColor}">${statusText}</span>
+                    </div>
+                </div>
+                <div style="display:flex;gap:10px;align-items:center;margin-top:12px">
+                    <button class="service-btn ${btnClass}" onclick="toggleService('${s.id}', '${btnAction}')">${btnLabel}</button>
+                    <div style="display:flex;align-items:center;gap:6px;margin-left:auto">
+                        <span style="font-size:13px;color:var(--text-secondary)">Автозапуск</span>
+                        <label class="toggle-switch">
+                            <input type="checkbox" ${s.autostart ? 'checked' : ''} onchange="toggleAutostart('${s.id}', this.checked)">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                </div>
+            `;
+            container.appendChild(card);
+        });
+    } catch(e) { console.error('loadServices:', e); }
+}
+
+async function toggleService(name, action) {
+    try {
+        const res = await authFetch('/api/services/' + action, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name })
+        });
+        if (res.ok) {
+            setTimeout(loadServices, 1500);
+        } else {
+            const data = await res.json();
+            alert('\u041e\u0448\u0438\u0431\u043a\u0430: ' + (data.error || '\u043d\u0435\u0438\u0437\u0432\u0435\u0441\u0442\u043d\u0430'));
+        }
+    } catch(e) { alert('\u041e\u0448\u0438\u0431\u043a\u0430 \u0441\u0435\u0442\u0438'); }
+}
+
+async function toggleAutostart(name, enabled) {
+    try {
+        const res = await authFetch('/api/services/autostart', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name, enabled })
+        });
+        if (!res.ok) {
+            alert('\u041e\u0448\u0438\u0431\u043a\u0430 \u043d\u0430\u0441\u0442\u0440\u043e\u0439\u043a\u0438 \u0430\u0432\u0442\u043e\u0437\u0430\u043f\u0443\u0441\u043a\u0430');
+            loadServices();
+        }
+    } catch(e) { alert('\u041e\u0448\u0438\u0431\u043a\u0430 \u0441\u0435\u0442\u0438'); }
+}
+
 // Запуск инициализации при загрузке скрипта
 window.addEventListener('DOMContentLoaded', () => {
     updateStats();
@@ -752,6 +890,7 @@ window.addEventListener('DOMContentLoaded', () => {
     updateTunnelLinks();
     loadLinks();
     loadProcesses();
+    loadServices();
     // Battery refresh every 60s (not on every stats tick)
     setInterval(loadBattery, 60000);
 });

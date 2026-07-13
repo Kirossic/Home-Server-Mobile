@@ -19,5 +19,12 @@
     "url": "http://192.168.18.36:8080/",
     "icon": "",
     "desc": "Панель управления сервером"
+  },
+  {
+    "id": 4,
+    "name": "Bukings",
+    "url": "http://192.168.18.36:3000/Buking/home/index.html",
+    "icon": "",
+    "desc": ""
   }
 ]
