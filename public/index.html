@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Redmi A3 Control Panel</title>
+    <!-- Подключаем внешние стили -->
+    <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+    <div class="container">
+        <div class="tabs">
+            <button class="tab-btn active" onclick="switchTab('dashboard')">Панель управления</button>
+            <button class="tab-btn" onclick="switchTab('links')">Ссылки на сервисы</button>
+            <button class="tab-btn" onclick="switchTab('ide')">Быстрый запуск IDE</button>
+            <button class="tab-btn" onclick="switchTab('autostart')">⚙ Настройка Автозапуска</button>
+            <button class="tab-btn" onclick="switchTab('terminal')">💻 Терминал</button>
+            <button class="tab-btn" onclick="switchTab('logs')">📋 Логи</button>
+            <button class="tab-btn" onclick="switchTab('processes')">⚙ Процессы</button>
+        </div>
+
+        <!-- Вкладка 1: Панель Управления -->
+        <div id="dashboard" class="tab-content active">
+            <div class="layout">
+                <div class="card">
+                    <h2>Характеристики</h2>
+                    <div class="metric" onclick="toggleMetric(this)" data-metric="os">
+                        <div class="metric-header"><h3>ОС / Окружение</h3><span class="metric-arrow">▸</span></div>
+                        <div class="value" id="os">-</div>
+                        <div class="metric-detail" id="detail-os">
+                            <div class="detail-row"><span class="detail-label">Хост</span><span id="osHost">-</span></div>
+                            <div class="detail-row"><span class="detail-label">Платформа</span><span id="osPlatform">-</span></div>
+                            <div class="detail-row"><span class="detail-label">Архитектура</span><span id="osArch">-</span></div>
+                            <div class="detail-row"><span class="detail-label">Ядро</span><span id="osKernel">-</span></div>
+                        </div>
+                    </div>
+                    <div class="metric" onclick="toggleMetric(this)" data-metric="ram">
+                        <div class="metric-header"><h3>Оперативная память</h3><span class="metric-arrow">▸</span></div>
+                        <div class="value"><span id="ramUsed">0</span> / <span id="ramTotal">0</span> ГБ</div>
+                        <div class="metric-detail" id="detail-ram">
+                            <div class="progress-bar"><div class="progress-fill" id="ramBar" style="width:0%"></div></div>
+                            <div class="detail-row"><span class="detail-label">Свободно</span><span id="ramFreeDetail">-</span></div>
+                        </div>
+                    </div>
+                    <div class="metric" onclick="toggleMetric(this)" data-metric="disk">
+                        <div class="metric-header"><h3>Накопитель</h3><span class="metric-arrow">▸</span></div>
+                        <div class="value"><span id="diskUsed">-</span> / <span id="diskTotal">-</span></div>
+                        <div class="metric-detail" id="detail-disk">
+                            <div class="progress-bar"><div class="progress-fill disk-fill" id="diskBar" style="width:0%"></div></div>
+                        </div>
+                    </div>
+                    <div class="metric" onclick="toggleMetric(this)" data-metric="net">
+                        <div class="metric-header"><h3>Сеть</h3><span class="metric-arrow">▸</span></div>
+                        <div class="value" id="ip">-</div>
+                        <div class="metric-detail" id="detail-net"><div id="netList"></div></div>
+                    </div>
+                    <div class="metric" onclick="toggleMetric(this)" data-metric="uptime">
+                        <div class="metric-header"><h3>Аптайм</h3><span class="metric-arrow">▸</span></div>
+                        <div class="value"><span id="uptime">0</span> мин.</div>
+                        <div class="metric-detail" id="detail-uptime">
+                            <div class="detail-row"><span class="detail-label">Дней</span><span id="uptimeDays">-</span></div>
+                            <div class="detail-row"><span class="detail-label">Часов</span><span id="uptimeHours">-</span></div>
+                            <div class="detail-row"><span class="detail-label">Нагрузка (1/5/15)</span><span id="loadAvg">-</span></div>
+                        </div>
+                    </div>
+                    <div class="metric" onclick="toggleMetric(this)" data-metric="battery">
+                        <div class="metric-header"><h3>Батарея</h3><span class="metric-arrow">▸</span></div>
+                        <div class="value"><span id="batteryLevel">-</span> <span id="batteryStatus"></span></div>
+                        <div class="metric-detail" id="detail-battery">
+                            <div class="detail-row"><span class="detail-label">Температура</span><span id="batteryTemp">-</span></div>
+                            <div class="detail-row"><span class="detail-label">Вольтаж</span><span id="batteryVolt">-</span></div>
+                            <div class="detail-row"><span class="detail-label">Здоровье</span><span id="batteryHealth">-</span></div>
+                            <div class="detail-row"><span class="detail-label">Циклы</span><span id="batteryCycles">-</span></div>
+                        </div>
+                    </div>
+                    <div class="settings-block">
+                        <label for="refreshInterval">Частота обновления данных:</label>
+                        <select id="refreshInterval" onchange="changeRefreshInterval(this.value)">
+                            <option value="1000">1 секунда</option>
+                            <option value="3000" selected>3 секунды</option>
+                            <option value="5000">5 секунд</option>
+                            <option value="10000">10 секунд</option>
+                            <option value="0">Не обновлять автоматически</option>
+                        </select>
+                    </div>
+
+                    <div class="section" style="background: #222; padding: 15px; border-radius: 8px; margin-bottom: 20px; color: #fff;">
+                        <h3>🌐 Внешний доступ (Cloudflare Tunnels)</h3>
+                        
+                        <div style="margin-bottom: 15px;">
+                            <p style="margin-bottom: 5px;"><strong>Адрес этой Панели:</strong></p>
+                            <a id="tunnel-panel-link" href="#" target="_blank" class="btn" style="display: inline-block; background: #4CAF50; color: #fff; padding: 8px 12px; border-radius: 4px; text-decoration: none; font-weight: bold; text-align: center; width: 100%;">Обновление ссылки...</a>
+                        </div>
+
+                        <div>
+                            <p style="margin-bottom: 5px;"><strong>Адрес среды разработки IDE:</strong></p>
+                            <a id="tunnel-ide-link" href="#" target="_blank" class="btn" style="display: inline-block; background: #00bcd4; color: #fff; padding: 8px 12px; border-radius: 4px; text-decoration: none; font-weight: bold; text-align: center; width: 100%;">🚀 Открыть IDE с кодом</a>
+                        </div>
+                    </div>
+
+                    <button class="btn-danger" onclick="triggerSystemRestart()">Перезапустить всё</button>
+                </div>
+                <div class="fm-container">
+                    <div class="file-list">
+                        <h3>Проводник</h3>
+                        <div class="nav-controls">
+                            <div class="nav-btn" onclick="goBack()">⬅ Назад</div>
+                            <div class="nav-btn" onclick="loadFiles('/')">📂 В корень (/)</div>
+                            <div class="nav-btn" onclick="loadFiles('')">🏠 В домашнюю (~)</div>
+                            <div class="nav-btn" onclick="document.getElementById('fileInput').click()">⬆ Загрузить</div>
+                            <div class="nav-btn" onclick="createFolder()">➕ Папку</div>
+                            <div class="nav-btn" onclick="createFile()">📄 Файл</div>
+                            <input type="file" id="fileInput" onchange="uploadFile()" style="display:none">
+                        </div>
+                        <div class="search-bar"><input type="text" id="searchQuery" placeholder="🔍 Поиск файлов..." onkeydown="if(event.key==='Enter')searchFiles()"></div>
+                        <div class="path-bar" id="pathBar">/</div>
+                        <div id="filesContainer"></div>
+                    </div>
+                    <div class="editor-zone">
+                        <h4 id="editorTitle">Выберите файл для редактирования</h4>
+                        <textarea id="editor" disabled></textarea>
+                        <button id="saveBtn" onclick="saveCurrentFile()" style="display:none;">Сохранить изменения</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Вкладка 2: Горячие Ссылки -->
+        <div id="links" class="tab-content">
+            <div class="links-header">
+                <h2>Мои сервисы</h2>
+                <button class="btn-add-link" onclick="showAddLinkForm()">+ Добавить ссылку</button>
+            </div>
+            <div id="linksContainer" class="links-grid"></div>
+            <div id="linkFormOverlay" class="overlay" style="display:none" onclick="hideLinkForm()">
+                <div class="modal" onclick="event.stopPropagation()">
+                    <h3 id="linkFormTitle">Добавить ссылку</h3>
+                    <input type="text" id="linkName" placeholder="Название (например, Grafana)">
+                    <input type="text" id="linkUrl" placeholder="URL (например, http://localhost:3000)">
+                    <input type="text" id="linkIcon" placeholder="Иконка (например, 📊 или оставьте пустым)">
+                    <input type="text" id="linkDesc" placeholder="Описание (необязательно)">
+                    <input type="hidden" id="linkEditId" value="">
+                    <div class="modal-actions">
+                        <button onclick="saveLink()">Сохранить</button>
+                        <button class="btn-cancel" onclick="hideLinkForm()">Отмена</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Вкладка 3: Быстрый старт IDE -->
+        <div id="ide" class="tab-content">
+            <h2>Проекты в разработке</h2>
+            <p>Кликните по проекту, чтобы быстро открыть его рабочую область в новой вкладке IDE:</p>
+            <div class="links-grid" id="projectsIdeContainer"></div>
+        </div>
+
+        <!-- Вкладка 4: Редактор автозапуска -->
+        <div id="autostart" class="tab-content">
+            <div class="config-zone">
+                <h2>Редактирование скрипта автозапуска (~/.bashrc)</h2>
+                <p style="color: #a8a8b3; font-size: 13px;">Службы, прописанные здесь, автоматически поднимутся при старте Termux или при нажатии кнопки «Перезапустить всё».</p>
+                <textarea id="bashrcEditor" style="min-height: 480px;"></textarea>
+                <button onclick="saveBashrc()">Сохранить конфигурацию автозапуска</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Подключаем внешнюю логику -->
+    <script src="/script.js"></script>
+        <!-- Вкладка 5: Терминал -->
+        <div id="logs" class="tab-content">
+            <div class="links-header">
+                <h2>📋 Просмотр логов</h2>
+                <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+                    <select id="logSelector" onchange="loadLogs()" style="background:var(--bg-primary);border:1px solid var(--border);color:#fff;padding:6px 10px;border-radius:4px">
+                        <option value="main-server">main-server</option>
+                        <option value="nodemon">nodemon</option>
+                        <option value="code-server">code-server</option>
+                        <option value="panel_tunnel">panel_tunnel</option>
+                        <option value="ide_tunnel">ide_tunnel</option>
+                    </select>
+                    <button onclick="loadLogs()" style="margin:0">🔄</button>
+                    <button onclick="document.getElementById('logOutput').textContent=''" style="margin:0;background:var(--bg-hover);color:#fff">✕ Очистить</button>
+                    <button id="logViewToggle" onclick="toggleLogView()" style="margin:0;background:var(--bg-hover);color:#fff">📋 Структура</button>
+                </div>
+            </div>
+            <pre id="logOutput" class="terminal-output" style="min-height:400px;max-height:600px">Выберите лог-файл и нажмите 🔄</pre>
+        </div>
+
+        <div id="processes" class="tab-content">
+            <div class="links-header">
+                <h2>⚙ Процессы</h2>
+                <button onclick="loadProcesses()" style="margin:0">🔄 Обновить</button>
+            </div>
+            <div class="proc-stats" id="procStats"></div>
+            <div class="search-bar"><input type="text" id="procSearch" placeholder="🔍 Поиск по PID, имени, команде..." oninput="filterProcesses()"></div>
+            <div class="process-table-wrap">
+                <table class="process-table">
+                    <thead>
+                        <tr>
+                            <th>PID</th>
+                            <th>Пользователь</th>
+                            <th>CPU%</th>
+                            <th>MEM%</th>
+                            <th>Команда</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody id="processTbody">
+                        <tr><td colspan="6" style="text-align:center;color:var(--text-secondary)">Загрузка...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div id="terminal" class="tab-content">
+            <h2>💻 Web Terminal</h2>
+            <div class="terminal-container">
+                <div class="terminal-cmds">
+                    <span class="cmd-chip" onclick="termExec('top -b -n 1')">top</span>
+                    <span class="cmd-chip" onclick="termExec('ps aux')">ps aux</span>
+                    <span class="cmd-chip" onclick="termExec('df -h')">df -h</span>
+                    <span class="cmd-chip" onclick="termExec('free -h')">free -h</span>
+                    <span class="cmd-chip" onclick="termExec('uname -a')">uname -a</span>
+                    <span class="cmd-chip" onclick="termExec('uptime')">uptime</span>
+                    <span class="cmd-chip" onclick="termExec('whoami')">whoami</span>
+                    
+                    <span class="cmd-chip" onclick="termExec('ls -la')">ls -la</span>
+                    <span class="cmd-chip" onclick="termExec('pwd')">pwd</span>
+                </div>
+                <div class="terminal-input-row">
+                    <span class="terminal-prompt" id="termPrompt">~$</span>
+                    <input type="text" id="terminalInput" class="terminal-input" placeholder="Введите команду..." onkeydown="if(event.key==='Enter')termExec()" autofocus>
+                    <button class="terminal-go" onclick="termExec()">⏎</button>
+                    <button class="terminal-clear" onclick="termClear()">✕</button>
+                </div>
+                <pre id="terminalOutput" class="terminal-output">Добро пожаловать в Web Terminal. Нажмите ⏎ чтобы выполнить команду.</pre>
+            </div>
+        </div>
+
+    <!-- Login Overlay -->
+    <div id="loginOverlay" class="overlay" style="display:none">
+        <div class="modal" style="text-align:center">
+            <h2 style="margin-bottom:8px">🔐 Требуется авторизация</h2>
+            <p style="color:var(--text-secondary);margin-bottom:16px;font-size:14px">Введите пароль для доступа к панели</p>
+            <input type="password" id="loginPassword" placeholder="Пароль" style="margin-bottom:12px" onkeydown="if(event.key==='Enter')submitLogin()">
+            <div class="modal-actions">
+                <button onclick="submitLogin()" style="flex:1">Войти</button>
+            </div>
+            <p id="loginError" style="color:var(--danger);font-size:13px;margin-top:8px;display:none">Неверный пароль</p>
+        </div>
+    </div>
+</body>
+</html>

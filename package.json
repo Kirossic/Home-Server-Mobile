@@ -1,0 +1,11 @@
+{
+  "name": "main-server",
+  "version": "1.0.0",
+  "main": "server.js",
+  "dependencies": {
+    "archiver": "^8.0.0",
+    "http-proxy": "^1.18.1",
+    "nodemon": "^3.1.14",
+    "systeminformation": "^5.23.4"
+  }
+}
