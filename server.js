@@ -23,6 +23,14 @@ proxy.on('error', (err, req, res) => {
 
 // --- Helpers ---
 
+const getDiskDetail = () => {
+    return new Promise((resolve) => {
+        exec('df -h /data /sdcard 2>/dev/null || df -h 2>/dev/null', { timeout: 3000 }, (err, stdout) => {
+            resolve(stdout || 'unavailable');
+        });
+    });
+};
+
 const getDiskSpace = () => {
     return new Promise((resolve) => {
         exec('df -h /data 2>/dev/null', (err, stdout) => {
@@ -67,6 +75,7 @@ const sendUnauthorized = (res) => {
 };
 
 const serveFile = (res, filePath, contentType) => {
+    res.setHeader('Cache-Control', 'no-cache, max-age=0');
     fs.readFile(filePath, (err, data) => {
         if (err) { res.writeHead(500); return res.end('Error loading file'); }
         res.writeHead(200, { 'Content-Type': contentType });
@@ -82,6 +91,48 @@ const json = (res, data, status = 200) => {
 const text = (res, data, status = 200) => {
     res.writeHead(status, { 'Content-Type': 'text/plain; charset=utf-8' });
     res.end(data);
+};
+
+
+// --- Service management ---
+const PG_DIR = path.join(os.homedir(), '..', 'usr', 'var', 'lib', 'postgresql');
+const SERVICES = {
+  bukings: {
+    id: 'bukings',
+    label: 'Bukings',
+    desc: '\u0421\u0435\u0440\u0432\u0438\u0441 \u0431\u0440\u043e\u043d\u0438\u0440\u043e\u0432\u0430\u043d\u0438\u044f (\u043f\u043e\u0440\u0442 3000)',
+    icon: '\ud83d\udcc5',
+    startCmd: 'cd ' + path.join(os.homedir(), 'projects', 'Bukings') + ' && setsid node backend/src/server.js > ~/Bukings-server.log 2>&1 &',
+    stopCmd: 'pkill -f "node backend/src/server.js"',
+    checkCmd: 'pgrep -f "node backend/src/server.js" >/dev/null 2>&1',
+  },
+  postgresql: {
+    id: 'postgresql',
+    label: 'PostgreSQL',
+    desc: '\u0411\u0430\u0437\u0430 \u0434\u0430\u043d\u043d\u044b\u0445 PostgreSQL (\u043f\u043e\u0440\u0442 5432)',
+    icon: '\ud83d\udcc4\ufe0f',
+    startCmd: 'pg_ctl -D ' + PG_DIR + ' -l ' + PG_DIR + '/logfile start',
+    stopCmd: 'pg_ctl -D ' + PG_DIR + ' stop',
+    checkCmd: 'pg_isready -h localhost -p 5432 >/dev/null 2>&1',
+  },
+};
+
+const SERVICE_AUTOSTART = {
+  bukings: [
+    '#service-bukings',
+    'if ! fuser 3000/tcp >/dev/null 2>&1 && [ -d "' + path.join(os.homedir(), 'projects', 'Bukings') + '" ]; then',
+    '    cd ' + path.join(os.homedir(), 'projects', 'Bukings') + ' && setsid node backend/src/server.js > ~/Bukings-server.log 2>&1 &',
+    '    cd ~',
+    'fi',
+    '#/service-bukings',
+  ].join('\n'),
+  postgresql: [
+    '#service-postgresql',
+    'if ! pg_isready >/dev/null 2>&1; then',
+    '    pg_ctl -D ' + PG_DIR + ' -l ' + PG_DIR + '/logfile start',
+    'fi',
+    '#/service-postgresql',
+  ].join('\n'),
 };
 
 // --- Handlers ---
@@ -108,6 +159,7 @@ async function handleStats(req, res) {
             ramFree: freeMem,
             diskTotal: disk.total,
             diskUsed: disk.used,
+            diskDetail: disk.total + ' / ' + disk.used,
             ip: getLocalIP(),
             uptime: Math.round(uptimeSec / 60),
             uptimeFull: {
@@ -418,6 +470,87 @@ function handleSystemRestart(req, res) {
     setTimeout(() => exec(killAndRestartCmd, { shell: '/bin/bash' }), 500);
 }
 
+
+
+// --- Service Handlers ---
+
+async function handleServicesStatus(req, res) {
+  const results = [];
+  for (const s of Object.values(SERVICES)) {
+    const running = await new Promise(resolve => {
+      exec(s.checkCmd, (err) => resolve(!err));
+    });
+    let bashrc = '';
+    try { bashrc = fs.readFileSync(BASHRC_PATH, 'utf-8'); } catch(e) {}
+    const autostart = bashrc.includes('#service-' + s.id);
+    results.push({ id: s.id, label: s.label, desc: s.desc, icon: s.icon, running, autostart });
+  }
+  json(res, results);
+}
+
+function handleServiceStart(req, res) {
+  let body = '';
+  req.on('data', c => body += c.toString());
+  req.on('end', () => {
+    try {
+      const { name } = JSON.parse(body);
+      const svc = SERVICES[name];
+      if (!svc) return json(res, { error: 'Unknown service' }, 400);
+      exec(svc.startCmd, (err) => {
+        if (err) return json(res, { error: err.message }, 500);
+        setTimeout(() => json(res, { success: true }), 500);
+      });
+    } catch (e) {
+      json(res, { error: 'invalid request' }, 400);
+    }
+  });
+}
+
+function handleServiceStop(req, res) {
+  let body = '';
+  req.on('data', c => body += c.toString());
+  req.on('end', () => {
+    try {
+      const { name } = JSON.parse(body);
+      const svc = SERVICES[name];
+      if (!svc) return json(res, { error: 'Unknown service' }, 400);
+      exec(svc.stopCmd, (err) => {
+        if (err) return json(res, { error: err.message }, 500);
+        setTimeout(() => json(res, { success: true }), 1000);
+      });
+    } catch (e) {
+      json(res, { error: 'invalid request' }, 400);
+    }
+  });
+}
+
+function handleServiceAutostart(req, res) {
+  let body = '';
+  req.on('data', c => body += c.toString());
+  req.on('end', () => {
+    try {
+      const { name, enabled } = JSON.parse(body);
+      const svc = SERVICES[name];
+      if (!svc) return json(res, { error: 'Unknown service' }, 400);
+      let bashrc = '';
+      try { bashrc = fs.readFileSync(BASHRC_PATH, 'utf-8'); } catch(e) { bashrc = ''; }
+      const marker = '#service-' + svc.id;
+      const endMarker = '#/service-' + svc.id;
+      const regex = new RegExp(marker + '[\\s\\S]*?' + endMarker + '\\n?', '');
+      if (enabled) {
+        if (bashrc.includes(marker)) return json(res, { success: true });
+        bashrc = bashrc.trimEnd() + '\n\n' + SERVICE_AUTOSTART[svc.id] + '\n';
+      } else {
+        bashrc = bashrc.replace(regex, '').replace(/\n{2,}/g, '\n').trimEnd() + '\n';
+      }
+      fs.writeFileSync(BASHRC_PATH, bashrc, 'utf-8');
+      json(res, { success: true });
+    } catch (e) {
+      json(res, { error: e.message }, 500);
+    }
+  });
+}
+
 // --- Static file maps ---
 const staticFiles = {
     '/':             { file: 'index.html', type: 'text/html; charset=utf-8' },
@@ -452,6 +585,10 @@ const routes = {
     'GET:/api/autostart/get':    handleAutostartGet,
     'POST:/api/autostart/save':  handleAutostartSave,
     'POST:/api/system/restart':  handleSystemRestart,
+    'GET:/api/services':          handleServicesStatus,
+    'POST:/api/services/start':   handleServiceStart,
+    'POST:/api/services/stop':    handleServiceStop,
+    'POST:/api/services/autostart': handleServiceAutostart,
 };
 
 function handleLogin(req, res) {
