@@ -12,7 +12,6 @@ module.exports = {
     BASHRC_PATH: path.join(START_DIR, '.bashrc'),
     LINKS_PATH: path.resolve(__dirname, '../../links.json'),
     PROJECTS_DIR: HOME_DIR,
-    PG_DIR: path.join(START_DIR, 'postgresql'),
-    PROJECTS_DIR_NAME: 'projects',
-    HOME_DIR,
+    PG_DIR: path.join(START_DIR, '..', 'usr', 'var', 'lib', 'postgresql'),
+    PANEL_PASSWORD: process.env.PANEL_PW || '',
 };
