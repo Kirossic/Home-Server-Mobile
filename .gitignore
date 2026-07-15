@@ -3,3 +3,7 @@ node_modules/
 nohup.out
 links.json
 main-server.log
+PROJECT_REPORT_LOCAL.md
+
+server copy.js
+server_.js
