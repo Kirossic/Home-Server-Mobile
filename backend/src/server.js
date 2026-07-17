@@ -3,39 +3,26 @@ const path = require('path');
 const os = require('os');
 const app = express();
 const indexRoutes = require('./routes/index');
-
+const { PORT, HOST, PANEL_PASSWORD } = require('./config/constants');
 const publicDir = path.resolve(__dirname, '../../public'); 
 
-const PORT = process.env.PORT || 8080;
-const HOST = '0.0.0.0'; 
-
 app.use('/api', (req, res, next) => {
-  if (!process.env.PANEL_PW || req.path === '/login') return next();
+  if (!PANEL_PASSWORD || req.path === '/login') return next();
   const token = req.headers['x-panel-pw'] || '';
-  if (token !== process.env.PANEL_PW) return res.status(401).send('Unauthorized');
+  if (token !== PANEL_PASSWORD) return res.status(401).send('Unauthorized');
   next();
 });
-
+app.use(express.json());
 app.use('/api', indexRoutes);
-
 app.use(express.static(publicDir));
+app.use((err, req, res, next) => {
+  console.error(`[error] ${err.method} ${err.url}:`, err.message);
+  res.status(err.status || 500).json({ error: err.message || 'Internal Server Error' });
+});
 
 app.get('/', (req, res) => {
   res.sendFile(path.join(publicDir, 'index.html'));
 });
-
-function getLocalIp() {
-  const interfaces = os.networkInterfaces();
-  for (const name of Object.keys(interfaces)) {
-    for (const iface of interfaces[name]) {
-      const isIPv4 = iface.family === 'IPv4' || iface.family === 4;
-      if (isIPv4 && !iface.internal) {
-        return iface.address;
-      }
-    }
-  }
-  return '127.0.0.1';
-}
 
 app.listen(PORT, HOST, () => {
   const localIp = getLocalIp();
