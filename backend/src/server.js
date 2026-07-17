@@ -4,6 +4,7 @@ const os = require('os');
 const app = express();
 const indexRoutes = require('./routes/index');
 const { PORT, HOST, PANEL_PASSWORD } = require('./config/constants');
+const getLocalIp = require('./utils/getLocalIp');
 const publicDir = path.resolve(__dirname, '../../public'); 
 
 app.use('/api', (req, res, next) => {
