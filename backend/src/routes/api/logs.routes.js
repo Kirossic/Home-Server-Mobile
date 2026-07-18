@@ -1,11 +1,13 @@
 const express = require('express');
 const router = express.Router();
+const fs = require('fs');
+const path = require('path');
+const os = require('os');
+const { execCommand } = require('../../utils/exec');
 
-const { fs, path, os, exec, urlParams } = require('./_shared');
-
-function handleLogs(req, res) {
-    const name = urlParams(req).get('name') || 'main-server';
-    const lines = urlParams(req).get('lines') || '50';
+async function handleLogs(req, res) {
+    const name = req.query.name || 'main-server';
+    const lines = req.query.lines || 100;
     const projectRoot = path.resolve(__dirname, '../../../../');
     const candidates = [
         path.join(projectRoot, name + '.log'),
@@ -16,10 +18,9 @@ function handleLogs(req, res) {
 
     const target = candidates.find(p => fs.existsSync(p)) || null;
     if (!target) return res.status(404).send('log not found');
-    exec('tail -n ' + parseInt(lines) + ' "' + target + '"', { timeout: 5000 }, (err, stdout) => {
-        if (err) return res.status(500).send('read failed');
-        res.type('text/plain; charset=utf-8').send(stdout || '(empty)');
-    });
+
+    const { stdout } = await execCommand(`tail -n ${lines} "${target}"`, { timeout: 5000 });
+    res.type('text/plain; charset=utf-8').send(stdout || '(empty)');
 }
 
 router.get('/', handleLogs);

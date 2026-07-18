@@ -1,7 +1,10 @@
 const express = require('express');
 const router = express.Router();
-
-const { os, fs, path, exec, getDiskSpace, getLocalIP } = require('./_shared');
+const os = require('os');
+const path = require('path');
+const fs = require('fs');
+const { getDiskSpace, getLocalIP } = require('../../utils/system');
+const { execCommand } = require('../../utils/exec');
 
 async function handleStats(req, res) {
     try {
@@ -62,20 +65,23 @@ function handleTunnelLinks(req, res) {
 }
 
 let batteryLock = false;
-function handleBattery(req, res) {
+async function handleBattery(req, res) {
     if (batteryLock) return res.status(429).json({ error: 'busy' });
     batteryLock = true;
-    exec('termux-battery-status', { timeout: 5000 }, (err, stdout) => {
+    try {
+        const { stdout } = await execCommand('termux-battery-status', { timeout: 5000 });
         batteryLock = false;
-        exec('pkill -f "termux-api BatteryStatus" 2>/dev/null', () => {});
-        if (err) return res.status(500).json({ error: 'battery info unavailable' });
+        await execCommand('pkill -f "termux-api BatteryStatus" 2>/dev/null', { timeout: 5000 });
         try { res.json(JSON.parse(stdout)); }
         catch (e) { res.status(500).json({ error: 'parse failed' }); }
-    });
+    } catch (err) {
+        batteryLock = false;
+        res.status(500).json({ error: 'battery info unavailable' });
+    }
 }
 
-    router.get('/stats', handleStats);
-    router.get('/tunnel/links', handleTunnelLinks);
+router.get('/stats', handleStats);
+router.get('/tunnel/links', handleTunnelLinks);
     router.get('/battery', handleBattery);
 
 module.exports = router;

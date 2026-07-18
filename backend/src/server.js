@@ -4,7 +4,7 @@ const os = require('os');
 const app = express();
 const indexRoutes = require('./routes/index');
 const { PORT, HOST, PANEL_PASSWORD } = require('./config/constants');
-const getLocalIp = require('./utils/getLocalIp');
+const { getLocalIP } = require('./utils/system');
 const publicDir = path.resolve(__dirname, '../../public'); 
 
 app.use('/api', (req, res, next) => {
@@ -26,11 +26,11 @@ app.get('/', (req, res) => {
 });
 
 app.listen(PORT, HOST, () => {
-  const localIp = getLocalIp();
+  const localIP = getLocalIP();
   
   console.log(`Сервер успешно запущен!`);
   console.log('_____________________________________________________________________');
   console.log(`| Локально на устройстве: | http://localhost:${PORT}/                  |`);
-  console.log(`| В локальной сети (Wi-Fi):| http://${localIp}:${PORT}/` + ' '.repeat(Math.max(0, 31 - localIp.length)) + '|');
+  console.log(`| В локальной сети (Wi-Fi):| http://${localIP}:${PORT}/` + ' '.repeat(Math.max(0, 31 - localIP.length)) + '|');
   console.log('|_________________________|_________________________________________|');
 });

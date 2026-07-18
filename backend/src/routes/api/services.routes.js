@@ -1,14 +1,15 @@
 const express = require('express');
 const router = express.Router();
-
-const { path, os, fs, exec, BASHRC_PATH, SERVICES, SERVICE_AUTOSTART } = require('./_shared');
+const fs = require('fs');
+const { execCommand } = require('../../utils/exec');
+const { BASHRC_PATH } = require('../../config/constants');
+const { SERVICES, SERVICE_AUTOSTART } = require('../../config/services');
 
 async function handleServicesStatus(req, res) {
   const results = [];
   for (const s of Object.values(SERVICES)) {
-    const running = await new Promise(resolve => {
-      exec(s.checkCmd, (err) => resolve(!err));
-    });
+    const { exitCode } = await execCommand(s.checkCmd);
+    const running = exitCode === 0;
     let bashrc = '';
     try { bashrc = fs.readFileSync(BASHRC_PATH, 'utf-8'); } catch(e) {}
     const autostart = bashrc.includes('#service-' + s.id);
@@ -17,56 +18,40 @@ async function handleServicesStatus(req, res) {
   res.json(results);
 }
 
-function handleServiceStart(req, res) {
-  let body = '';
-  req.on('data', c => body += c.toString());
-  req.on('end', () => {
-    try {
-      const { name } = JSON.parse(body);
-      const svc = SERVICES[name];
-      if (!svc) return res.status(400).json({ error: 'Unknown service' });
-      exec(svc.startCmd, (err) => {
-        if (err) return res.status(500).json({ error: err.message });
-        setTimeout(() => res.json({ success: true }), 500);
-      });
-    } catch (e) {
-      res.status(400).json({ error: 'invalid request' });
-    }
-  });
+async function handleServiceStart(req, res) {
+  try {
+    const { name } = req.body;
+    const svc = SERVICES[name];
+    if (!svc) return res.status(400).json({ error: 'Unknown service' });
+    await execCommand(svc.startCmd);
+    setTimeout(() => res.json({ success: true }), 500);
+  } catch (e) {
+    res.status(400).json({ error: e.message });
+  }
+}
+async function handleServiceStop(req, res) {
+  try {
+    const { name } = req.body;
+    const svc = SERVICES[name];
+    if (!svc) return res.status(400).json({ error: 'Unknown service' });
+    await execCommand(svc.stopCmd);
+    setTimeout(() => res.json({ success: true }), 1000);
+  } catch (e) {
+    res.status(400).json({ error: e.message });
+  }
 }
 
-function handleServiceStop(req, res) {
-  let body = '';
-  req.on('data', c => body += c.toString());
-  req.on('end', () => {
-    try {
-      const { name } = JSON.parse(body);
-      const svc = SERVICES[name];
-      if (!svc) return res.status(400).json({ error: 'Unknown service' });
-      exec(svc.stopCmd, (err) => {
-        if (err) return res.status(500).json({ error: err.message });
-        setTimeout(() => res.json({ success: true }), 1000);
-      });
-    } catch (e) {
-      res.status(400).json({ error: 'invalid request' });
-    }
-  });
-}
-
-function handleServiceAutostart(req, res) {
-  let body = '';
-  req.on('data', c => body += c.toString());
-  req.on('end', () => {
-    try {
-      const { name, enabled } = JSON.parse(body);
-      const svc = SERVICES[name];
-      if (!svc) return res.status(400).json({ error: 'Unknown service' });
-      let bashrc = '';
-      try { bashrc = fs.readFileSync(BASHRC_PATH, 'utf-8'); } catch(e) { bashrc = ''; }
-      const marker = '#service-' + svc.id;
-      const endMarker = '#/service-' + svc.id;
-      const regex = new RegExp(marker + '[\\s\\S]*?' + endMarker + '\\n?', '');
-      if (enabled) {
+async function handleServiceAutostart(req, res) {
+  try {
+    const { name, enabled } = req.body;
+    const svc = SERVICES[name];
+    if (!svc) return res.status(400).json({ error: 'Unknown service' });
+    let bashrc = '';
+    try { bashrc = fs.readFileSync(BASHRC_PATH, 'utf-8'); } catch(e) { bashrc = ''; }
+    const marker = '#service-' + svc.id;
+    const endMarker = '#/service-' + svc.id;
+    const regex = new RegExp(marker + '[\\s\\S]*?' + endMarker + '\\n?', '');
+    if (enabled) {
         if (bashrc.includes(marker)) return res.json({ success: true });
         bashrc = bashrc.trimEnd() + '\n\n' + SERVICE_AUTOSTART[svc.id] + '\n';
       } else {
@@ -77,7 +62,6 @@ function handleServiceAutostart(req, res) {
     } catch (e) {
       res.status(500).json({ error: e.message });
     }
-  });
 }
 
 router.get('/', handleServicesStatus);
