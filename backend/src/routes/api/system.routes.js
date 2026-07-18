@@ -1,9 +1,9 @@
 const express = require('express');
 const router = express.Router();
+const { execCommand } = require('../../utils/exec');
+const { BASHRC_PATH } = require('../../config/constants');
 
-const { exec, BASHRC_PATH } = require('./_shared');
-
-function handleSystemRestart(req, res) {
+async function handleSystemRestart(req, res) {
     res.send('Restarting...');
     const killAndRestartCmd = [
         '( pkill -f "cloudflared"',
@@ -16,7 +16,7 @@ function handleSystemRestart(req, res) {
         'done',
         'source ' + BASHRC_PATH + ' ) &'
     ].join('\n');
-    setTimeout(() => exec(killAndRestartCmd, { shell: '/bin/bash' }), 500);
+    setTimeout(() => execCommand(killAndRestartCmd, { shell: '/bin/bash', timeout: 5000 }), 500);
 }
 
 router.post('/restart', handleSystemRestart);

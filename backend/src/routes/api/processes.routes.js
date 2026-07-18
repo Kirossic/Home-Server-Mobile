@@ -1,11 +1,10 @@
 const express = require('express');
 const router = express.Router();
+const { execCommand } = require('../../utils/exec');
 
-const { exec } = require('./_shared');
-
-function handleProcessList(req, res) {
-    exec('ps aux', { timeout: 5000 }, (err, stdout) => {
-        if (err) return res.status(500).json({ error: 'ps aux failed' });
+async function handleProcessList(req, res) {
+    try {
+        const { stdout } = await execCommand('ps aux', { timeout: 5000 });
         const lines = stdout.trim().split('\n').slice(1); // skip header
         const processes = lines.map(line => {
             const parts = line.trim().split(/\s+/);
@@ -25,24 +24,20 @@ function handleProcessList(req, res) {
             };
         }).filter(Boolean);
         res.json(processes);
-    });
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to retrieve process list' });
+    }
 }
 
-function handleProcessKill(req, res) {
-    let body = '';
-    req.on('data', c => body += c.toString());
-    req.on('end', () => {
-        try {
-            const { pid } = JSON.parse(body);
-            if (!pid) return res.status(400).json({ error: 'pid required' });
-            exec('kill ' + parseInt(pid), (err) => {
-                if (err) return res.status(500).json({ error: 'kill failed' });
-                res.json({ success: true });
-            });
-        } catch (e) {
-            res.status(400).json({ error: 'invalid request' });
-        }
-    });
+async function handleProcessKill(req, res) {
+    try {
+        const { pid } = req.body;
+        if (!pid) return res.status(400).json({ error: 'pid required' });
+        await execCommand(`kill ${parseInt(pid)}`, { timeout: 5000 });
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to kill process' });
+    }
 }
 
 router.get('/', handleProcessList);
