@@ -432,7 +432,11 @@ async function saveLink() {
     }
 
     try {
-        const res = await authFetch('/api/links', { method: 'POST', body: JSON.stringify(linksData) });
+        const res = await authFetch('/api/links', { 
+            method: 'POST', 
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(linksData) 
+        });
         if (res.ok) { hideLinkForm(); loadLinks(); }
         else { alert('Ошибка сохранения'); }
     } catch(e) { alert('Ошибка сети'); }
@@ -442,7 +446,11 @@ async function deleteLink(id) {
     if (!confirm('Удалить ссылку?')) return;
     linksData = linksData.filter(l => l.id !== id);
     try {
-        const res = await authFetch('/api/links', { method: 'POST', body: JSON.stringify(linksData) });
+        const res = await authFetch('/api/links', { 
+            method: 'POST', 
+            headers: { 'Content-Type': 'application/json' }, 
+            body: JSON.stringify(linksData) 
+        });
         if (res.ok) loadLinks();
     } catch(e) { alert('Ошибка сети'); }
 }
