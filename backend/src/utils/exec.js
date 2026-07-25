@@ -6,11 +6,10 @@ function execCommand(cmd, options = {}) {
     return new Promise((resolve, reject) => {
         exec(cmd, {timeout, cwd, shell}, (error, stdout, stderr) => {
             const exitCode = error ? (error.code || 1) : 0;
-            if (error && exitCode !== 0) {
+            if (error) {
                 console.error(`[exec] exit=${exitCode}\ncmd="${cmd.slice(0, 100)}" \nError: ${error.message}`);
-            } else {
-                resolve({ stdout: stdout || '', stderr: stderr || '', exitCode });
             }
+            resolve({ stdout: stdout || '', stderr: stderr || '', exitCode });
         });
     });
 }
