@@ -9,6 +9,8 @@ let intervals = [];
 function startCollector() {
   logEvent('server_start', { uptime: os.uptime(), hostname: os.hostname() });
 
+  cleanupOldMetrics();
+
   collectRam();
   collectBattery();
   collectStorage();
@@ -24,6 +26,21 @@ function stopCollector() {
   intervals.forEach(clearInterval);
   intervals = [];
   console.log('[metrics] Collector stopped');
+}
+
+function cleanupOldMetrics() {
+  try {
+    const db = getDb();
+    db.run("DELETE FROM metrics_storage WHERE mount LIKE '/apex/%'");
+    db.run("DELETE FROM metrics_storage WHERE mount LIKE '/bootstrap-apex/%'");
+    db.run("DELETE FROM metrics_storage WHERE mount LIKE '/system/%'");
+    db.run("DELETE FROM metrics_storage WHERE mount LIKE '/vendor/%'");
+    db.run("DELETE FROM metrics_storage WHERE mount LIKE '/product/%'");
+    db.run("DELETE FROM metrics_storage WHERE mount = '/'");
+    console.log('[metrics] Cleaned up old storage entries');
+  } catch (err) {
+    console.error('[metrics] Cleanup error:', err.message);
+  }
 }
 
 function collectRam() {
@@ -75,6 +92,11 @@ async function collectStorage() {
     const lines = stdout.trim().split('\n').filter(Boolean);
     const db = getDb();
 
+    const SKIP_MOUNTS = [
+      '/', '/apex', '/bootstrap-apex', '/system', '/vendor',
+      '/product', '/mnt', '/odm', '/cust', '/dev', '/sys', '/proc'
+    ];
+
     for (const line of lines) {
       const parts = line.replace(/\s+/g, ' ').split(' ');
       const mount = parts[parts.length - 1];
@@ -82,18 +104,29 @@ async function collectStorage() {
       const used = parts[2];
       const avail = parts[3];
 
-      if (mount && total && used) {
-        const toGb = (v) => {
-          if (!v || v === '-') return null;
-          const num = parseFloat(v);
-          if (v.endsWith('G')) return num;
-          if (v.endsWith('T')) return num * 1024;
-          if (v.endsWith('M')) return num / 1024;
-          return num;
-        };
-        db.run('INSERT INTO metrics_storage (mount, total_gb, used_gb, avail_gb) VALUES (?, ?, ?, ?)',
-          [mount, toGb(total), toGb(used), toGb(avail)]);
-      }
+      if (!mount || !total || !used) continue;
+
+      if (SKIP_MOUNTS.some(p => mount === p || mount.startsWith(p + '/'))) continue;
+
+      const toGb = (v) => {
+        if (!v || v === '-') return null;
+        const num = parseFloat(v);
+        if (v.endsWith('G')) return num;
+        if (v.endsWith('T')) return num * 1024;
+        if (v.endsWith('M')) return num / 1024;
+        return num;
+      };
+
+      const totalGb = toGb(total);
+      const usedGb = toGb(used);
+      const availGb = toGb(avail);
+
+      if (totalGb === null || usedGb === null) continue;
+      if (totalGb === 0) continue;
+      if (usedGb > totalGb * 5) continue;
+
+      db.run('INSERT INTO metrics_storage (mount, total_gb, used_gb, avail_gb) VALUES (?, ?, ?, ?)',
+        [mount, totalGb, usedGb, availGb]);
     }
   } catch (err) {
     console.error('[metrics] Storage collect error:', err.message);
