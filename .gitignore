@@ -4,6 +4,7 @@ nohup.out
 links.json
 main-server.log
 PROJECT_REPORT_LOCAL.md
+AGENTS.md
 
 server copy.js
 server_.js
