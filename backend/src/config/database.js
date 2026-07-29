@@ -1,22 +1,30 @@
-const Database = require('better-sqlite3');
 const path = require('path');
 const fs = require('fs');
+const initSqlJs = require('sql.js');
 
 const DB_DIR = path.resolve(__dirname, '../../../data');
 const DB_PATH = path.join(DB_DIR, 'metrics.db');
 
-let db;
+let db = null;
 
-function initDatabase() {
+async function initDatabase() {
   if (!fs.existsSync(DB_DIR)) {
     fs.mkdirSync(DB_DIR, { recursive: true });
     console.log('[db] Created data directory:', DB_DIR);
   }
 
-  db = new Database(DB_PATH);
-  db.pragma('journal_mode = WAL');
+  const SQL = await initSqlJs();
 
-  db.exec(`
+  if (fs.existsSync(DB_PATH)) {
+    const buffer = fs.readFileSync(DB_PATH);
+    db = new SQL.Database(buffer);
+    console.log('[db] Loaded existing database');
+  } else {
+    db = new SQL.Database();
+    console.log('[db] Created new database');
+  }
+
+  db.run(`
     CREATE TABLE IF NOT EXISTS metrics_ram (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       ts TEXT NOT NULL DEFAULT (datetime('now','localtime')),
@@ -63,13 +71,45 @@ function initDatabase() {
     CREATE INDEX IF NOT EXISTS idx_events_type ON events(type);
   `);
 
+  saveDb();
+
   console.log('[db] Initialized:', DB_PATH);
   return db;
 }
 
+function saveDb() {
+  try {
+    const data = Buffer.from(db.export());
+    fs.writeFileSync(DB_PATH, data);
+  } catch (err) {
+    console.error('[db] Save error:', err.message);
+  }
+}
+
+function dbRun(sql, params = []) {
+  if (!db) throw new Error('Database not initialized');
+  db.run(sql, params);
+  saveDb();
+}
+
+function dbAll(sql, params = []) {
+  if (!db) throw new Error('Database not initialized');
+  const stmt = db.prepare(sql);
+  if (params.length > 0) stmt.bind(params);
+  const rows = [];
+  while (stmt.step()) rows.push(stmt.getAsObject());
+  stmt.free();
+  return rows;
+}
+
+function dbGet(sql, params = []) {
+  const rows = dbAll(sql, params);
+  return rows.length > 0 ? rows[0] : null;
+}
+
 function getDb() {
   if (!db) throw new Error('Database not initialized. Call initDatabase() first.');
-  return db;
+  return { run: dbRun, all: dbAll, get: dbGet };
 }
 
 module.exports = { initDatabase, getDb };

@@ -4,8 +4,6 @@ const { execCommand } = require('../utils/exec');
 const { getDiskSpace } = require('../utils/system');
 const { logEvent } = require('./events.service');
 
-const db = () => getDb();
-
 let intervals = [];
 
 function startCollector() {
@@ -34,16 +32,17 @@ function collectRam() {
     const freeMem = (os.freemem() / 1024 / 1024 / 1024).toFixed(2);
     const loadAvg = os.loadavg();
 
-    db().prepare(`
-      INSERT INTO metrics_ram (used_gb, total_gb, free_gb, load_1m, load_5m, load_15m)
-      VALUES (?, ?, ?, ?, ?, ?)
-    `).run(
-      (totalMem - freeMem).toFixed(2),
-      totalMem,
-      freeMem,
-      loadAvg[0].toFixed(2),
-      loadAvg[1].toFixed(2),
-      loadAvg[2].toFixed(2)
+    getDb().run(
+      `INSERT INTO metrics_ram (used_gb, total_gb, free_gb, load_1m, load_5m, load_15m)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+      [
+        (totalMem - freeMem).toFixed(2),
+        totalMem,
+        freeMem,
+        loadAvg[0].toFixed(2),
+        loadAvg[1].toFixed(2),
+        loadAvg[2].toFixed(2)
+      ]
     );
   } catch (err) {
     console.error('[metrics] RAM collect error:', err.message);
@@ -58,16 +57,10 @@ async function collectBattery() {
     const b = JSON.parse(stdout);
     if (b.percentage === undefined) return;
 
-    db().prepare(`
-      INSERT INTO metrics_battery (percentage, status, temperature, voltage, health, cycles)
-      VALUES (?, ?, ?, ?, ?, ?)
-    `).run(
-      b.percentage,
-      b.status || 'unknown',
-      b.temperature || null,
-      b.voltage || null,
-      b.health || null,
-      b.cycles || null
+    getDb().run(
+      `INSERT INTO metrics_battery (percentage, status, temperature, voltage, health, cycles)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+      [b.percentage, b.status || 'unknown', b.temperature || null, b.voltage || null, b.health || null, b.cycles || null]
     );
   } catch (err) {
     // Battery command may not be available — skip silently
@@ -80,10 +73,7 @@ async function collectStorage() {
     if (!stdout) return;
 
     const lines = stdout.trim().split('\n').filter(Boolean);
-    const insert = db().prepare(`
-      INSERT INTO metrics_storage (mount, total_gb, used_gb, avail_gb)
-      VALUES (?, ?, ?, ?)
-    `);
+    const db = getDb();
 
     for (const line of lines) {
       const parts = line.replace(/\s+/g, ' ').split(' ');
@@ -101,7 +91,8 @@ async function collectStorage() {
           if (v.endsWith('M')) return num / 1024;
           return num;
         };
-        insert.run(mount, toGb(total), toGb(used), toGb(avail));
+        db.run('INSERT INTO metrics_storage (mount, total_gb, used_gb, avail_gb) VALUES (?, ?, ?, ?)',
+          [mount, toGb(total), toGb(used), toGb(avail)]);
       }
     }
   } catch (err) {
@@ -123,9 +114,8 @@ function getMetrics(type, { limit = 500, from, to } = {}) {
   }
 
   const where = conditions.length > 0 ? 'WHERE ' + conditions.join(' AND ') : '';
-  const rows = db().prepare(`SELECT * FROM ${type} ${where} ORDER BY id DESC LIMIT ?`).all(...params, limit);
+  const rows = getDb().all(`SELECT * FROM ${type} ${where} ORDER BY id DESC LIMIT ?`, [...params, limit]);
   rows.reverse();
-
   return rows;
 }
 

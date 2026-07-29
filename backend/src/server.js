@@ -27,15 +27,17 @@ app.get('/', (req, res) => {
   res.sendFile(path.join(publicDir, 'index.html'));
 });
 
-initDatabase();
-startCollector();
-
-app.listen(PORT, HOST, () => {
-  const localIP = getLocalIP();
-  
-  console.log(`Сервер успешно запущен!`);
-  console.log('_____________________________________________________________________');
-  console.log(`| Локально на устройстве: | http://localhost:${PORT}/                  |`);
-  console.log(`| В локальной сети (Wi-Fi):| http://${localIP}:${PORT}/` + ' '.repeat(Math.max(0, 31 - localIP.length)) + '|');
-  console.log('|_________________________|_________________________________________|');
+initDatabase().then(() => {
+  startCollector();
+  app.listen(PORT, HOST, () => {
+    const localIP = getLocalIP();
+    console.log(`Сервер успешно запущен!`);
+    console.log('_____________________________________________________________________');
+    console.log(`| Локально на устройстве: | http://localhost:${PORT}/                  |`);
+    console.log(`| В локальной сети (Wi-Fi):| http://${localIP}:${PORT}/` + ' '.repeat(Math.max(0, 31 - localIP.length)) + '|');
+    console.log('|_________________________|_________________________________________|');
+  });
+}).catch(err => {
+  console.error('[server] Failed to initialize database:', err.message);
+  process.exit(1);
 });
