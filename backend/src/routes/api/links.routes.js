@@ -3,6 +3,7 @@ const router = express.Router();
 const fs = require('fs');
 const { execCommand } = require('../../utils/exec');
 const { LINKS_PATH } = require('../../config/constants');
+const { logEvent } = require('../../services/events.service');
 
 async function handleLinksStatus(req, res) {
     fs.readFile(LINKS_PATH, 'utf-8', (err, data) => {
@@ -34,6 +35,7 @@ async function handleLinksSave(req, res) {
         const links = req.body;
         fs.writeFile(LINKS_PATH, JSON.stringify(links, null, 2), 'utf-8', (err) => {
             if (err) return res.status(500).json({ error: 'Save failed' });
+            logEvent('links_saved', { count: links.length });
             res.json({ success: true });
         });
     } catch (e) {

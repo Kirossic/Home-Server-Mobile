@@ -1,0 +1,108 @@
+let linksData = [];
+
+async function loadLinksStatus() {
+    try {
+        const res = await authFetch('/api/links/status');
+        return await res.json();
+    } catch(e) { return []; }
+}
+
+async function loadLinks() {
+    try {
+        const res = await authFetch('/api/links');
+        linksData = await res.json();
+        const container = document.getElementById('linksContainer');
+        container.innerHTML = '';
+        linksData.forEach(link => {
+            const card = document.createElement('div');
+            card.className = 'link-card';
+            const statuses = window._linkStatuses || [];
+            const st = statuses.find(s => s.id === link.id);
+            const dot = st ? (st.online ? '<span style="color:#04d361">●</span>' : '<span style="color:#e53e3e">●</span>') : '';
+            card.innerHTML = `
+                <div class="link-card-header">
+                    <span class="link-icon">${link.icon || '🔗'}</span>
+                    <h3>${link.name} ${dot}</h3>
+                </div>
+                <p>${link.desc || ''}</p>
+                <div class="link-card-actions">
+                    <a href="${link.url}" target="_blank" class="btn-link-open">Открыть</a>
+                    <button class="btn-link-edit" onclick="editLink(${link.id})">✏</button>
+                    <button class="btn-link-del" onclick="deleteLink(${link.id})">🗑</button>
+                </div>
+            `;
+            container.appendChild(card);
+        });
+
+        loadLinksStatus().then(statuses => {
+            window._linkStatuses = statuses;
+            loadLinks();
+        });
+    } catch(e) { console.error('loadLinks error', e); }
+}
+
+function showAddLinkForm() {
+    document.getElementById('linkFormTitle').innerText = 'Добавить ссылку';
+    document.getElementById('linkEditId').value = '';
+    document.getElementById('linkName').value = '';
+    document.getElementById('linkUrl').value = '';
+    document.getElementById('linkIcon').value = '';
+    document.getElementById('linkDesc').value = '';
+    document.getElementById('linkFormOverlay').style.display = 'flex';
+}
+
+function hideLinkForm() {
+    document.getElementById('linkFormOverlay').style.display = 'none';
+}
+
+function editLink(id) {
+    const link = linksData.find(l => l.id === id);
+    if (!link) return;
+    document.getElementById('linkFormTitle').innerText = 'Редактировать ссылку';
+    document.getElementById('linkEditId').value = id;
+    document.getElementById('linkName').value = link.name;
+    document.getElementById('linkUrl').value = link.url;
+    document.getElementById('linkIcon').value = link.icon || '';
+    document.getElementById('linkDesc').value = link.desc || '';
+    document.getElementById('linkFormOverlay').style.display = 'flex';
+}
+
+async function saveLink() {
+    const id = document.getElementById('linkEditId').value;
+    const name = document.getElementById('linkName').value.trim();
+    const url = document.getElementById('linkUrl').value.trim();
+    const icon = document.getElementById('linkIcon').value.trim();
+    const desc = document.getElementById('linkDesc').value.trim();
+    if (!name || !url) { alert('Название и URL обязательны'); return; }
+
+    if (id) {
+        const idx = linksData.findIndex(l => l.id === parseInt(id));
+        if (idx >= 0) linksData[idx] = { ...linksData[idx], name, url, icon, desc };
+    } else {
+        const newId = linksData.length > 0 ? Math.max(...linksData.map(l => l.id)) + 1 : 1;
+        linksData.push({ id: newId, name, url, icon, desc });
+    }
+
+    try {
+        const res = await authFetch('/api/links', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(linksData)
+        });
+        if (res.ok) { hideLinkForm(); loadLinks(); }
+        else { alert('Ошибка сохранения'); }
+    } catch(e) { alert('Ошибка сети'); }
+}
+
+async function deleteLink(id) {
+    if (!confirm('Удалить ссылку?')) return;
+    linksData = linksData.filter(l => l.id !== id);
+    try {
+        const res = await authFetch('/api/links', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(linksData)
+        });
+        if (res.ok) loadLinks();
+    } catch(e) { alert('Ошибка сети'); }
+}

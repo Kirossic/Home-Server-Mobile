@@ -5,6 +5,8 @@ const app = express();
 const indexRoutes = require('./routes/index');
 const { PORT, HOST, PANEL_PASSWORD } = require('./config/constants');
 const { getLocalIP } = require('./utils/system');
+const { initDatabase } = require('./config/database');
+const { startCollector } = require('./services/metrics-collector');
 const publicDir = path.resolve(__dirname, '../../public'); 
 
 app.use('/api', (req, res, next) => {
@@ -24,6 +26,9 @@ app.use((err, req, res, next) => {
 app.get('/', (req, res) => {
   res.sendFile(path.join(publicDir, 'index.html'));
 });
+
+initDatabase();
+startCollector();
 
 app.listen(PORT, HOST, () => {
   const localIP = getLocalIP();
