@@ -5,7 +5,9 @@ const { BASHRC_PATH } = require('../../config/constants');
 const { logEvent } = require('../../services/events.service');
 
 async function handleSystemRestart(req, res) {
+    logEvent('system_restart', {});
     res.send('Restarting...');
+
     const killAndRestartCmd = [
         '( pkill -f "cloudflared"',
         'pkill -f "postgres"',
@@ -17,8 +19,7 @@ async function handleSystemRestart(req, res) {
         'done',
         'source ' + BASHRC_PATH + ' ) &'
     ].join('\n');
-    logEvent('system_restart', {});
-    setTimeout(() => execCommand(killAndRestartCmd, { shell: '/bin/bash', timeout: 5000 }), 500);
+    setTimeout(() => execCommand(killAndRestartCmd, { shell: '/bin/bash', timeout: 5000 }), 2000);
 }
 
 router.post('/restart', handleSystemRestart);

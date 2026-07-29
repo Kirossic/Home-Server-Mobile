@@ -55,7 +55,7 @@ async function loadEvents() {
     tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--text-secondary)">Загрузка...</td></tr>';
 
     try {
-        const url = '/api/events?limit=50' + (type ? '&type=' + type : '');
+        const url = '/api/events?limit=200' + (type ? '&type=' + type : '');
         const res = await authFetch(url);
         const data = await res.json();
         tbody.innerHTML = '';

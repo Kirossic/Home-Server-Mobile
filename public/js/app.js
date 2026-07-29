@@ -50,6 +50,15 @@ function switchTab(tabId) {
     document.getElementById(tabId).classList.add('active');
     event.target.classList.add('active');
 
+    if (tabId === 'dashboard') {
+        const saved = localStorage.getItem('dashboard_refresh_ms') || "3000";
+        changeRefreshInterval(saved);
+        updateStats();
+    } else if (statsIntervalId) {
+        clearInterval(statsIntervalId);
+        statsIntervalId = null;
+    }
+
     if (tabId === 'ide') loadProjectsForIDE();
     if (tabId === 'logs') loadLogs();
     if (tabId === 'autostart') loadBashrc();
