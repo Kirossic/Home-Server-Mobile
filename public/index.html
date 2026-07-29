@@ -17,6 +17,7 @@
             <button class="tab-btn" onclick="switchTab('logs')">📋 Логи</button>
             <button class="tab-btn" onclick="switchTab('processes')">⚙ Процессы</button>
 			<button class="tab-btn" onclick="switchTab('services')">🔌 Службы</button>
+			<button class="tab-btn" onclick="switchTab('metrics')">📊 Метрики</button>
         </div>
 
         <!-- Вкладка 1: Панель Управления -->
@@ -144,7 +145,16 @@
     </div>
 
     <!-- Подключаем внешнюю логику -->
-    <script src="/script.js"></script>
+    <script src="/js/app.js"></script>
+    <script src="/js/dashboard.js"></script>
+    <script src="/js/files.js"></script>
+    <script src="/js/links.js"></script>
+    <script src="/js/terminal.js"></script>
+    <script src="/js/processes.js"></script>
+    <script src="/js/logs.js"></script>
+    <script src="/js/services.js"></script>
+    <script src="/js/autostart.js"></script>
+    <script src="/js/metrics.js"></script>
         <!-- Вкладка 5: Терминал -->
         <div id="logs" class="tab-content">
             <div class="links-header">
@@ -221,6 +231,52 @@
     <h2>🔌 Управление службами</h2>
     <p style="color: #a8a8b3; font-size: 13px;">Запуск/остановка служб и настройка автозапуска.</p>
     <div id="servicesContainer" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(420px,1fr));gap:16px;margin-top:16px;"></div>
+</div>
+
+<div id="metrics" class="tab-content">
+    <div class="links-header">
+        <h2>📊 Метрики и события</h2>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+            <select id="metricsType" onchange="loadMetrics()" style="background:var(--bg-primary);border:1px solid var(--border);color:#fff;padding:6px 10px;border-radius:4px">
+                <option value="ram">RAM</option>
+                <option value="battery">Батарея</option>
+                <option value="storage">Хранилище</option>
+            </select>
+            <select id="metricsLimit" onchange="loadMetrics()" style="background:var(--bg-primary);border:1px solid var(--border);color:#fff;padding:6px 10px;border-radius:4px">
+                <option value="50">50 записей</option>
+                <option value="200" selected>200 записей</option>
+                <option value="1000">1000 записей</option>
+            </select>
+            <button onclick="loadMetrics()" style="margin:0">🔄</button>
+        </div>
+    </div>
+    <div id="metricsContainer" class="process-table-wrap" style="margin-bottom:20px">
+        <table class="log-table">
+            <thead id="metricsTableHead"></thead>
+            <tbody id="metricsTableBody"></tbody>
+        </table>
+    </div>
+
+    <div class="links-header" style="margin-top:20px">
+        <h3>📜 Лента событий</h3>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+            <select id="eventsType" onchange="loadEvents()" style="background:var(--bg-primary);border:1px solid var(--border);color:#fff;padding:6px 10px;border-radius:4px">
+                <option value="">Все</option>
+                <option value="server_start">Запуск сервера</option>
+                <option value="service_start">Запуск служб</option>
+                <option value="service_stop">Остановка служб</option>
+                <option value="system_restart">Рестарт</option>
+                <option value="links_saved">Ссылки</option>
+            </select>
+            <button onclick="loadEvents()" style="margin:0">🔄</button>
+        </div>
+    </div>
+    <div id="eventsContainer" class="process-table-wrap">
+        <table class="log-table">
+            <thead><tr><th>Время</th><th>Тип</th><th>Детали</th><th>Уровень</th></tr></thead>
+            <tbody id="eventsTableBody"></tbody>
+        </table>
+    </div>
 </div>
 
 <!-- Login Overlay -->

@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { execCommand } = require('../../utils/exec');
 const { BASHRC_PATH } = require('../../config/constants');
+const { logEvent } = require('../../services/events.service');
 
 async function handleSystemRestart(req, res) {
     res.send('Restarting...');
@@ -16,6 +17,7 @@ async function handleSystemRestart(req, res) {
         'done',
         'source ' + BASHRC_PATH + ' ) &'
     ].join('\n');
+    logEvent('system_restart', {});
     setTimeout(() => execCommand(killAndRestartCmd, { shell: '/bin/bash', timeout: 5000 }), 500);
 }
 

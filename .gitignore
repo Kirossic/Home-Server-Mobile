@@ -8,3 +8,6 @@ PROJECT_REPORT_LOCAL.md
 server copy.js
 server_.js
 .env
+
+#data
+data/*

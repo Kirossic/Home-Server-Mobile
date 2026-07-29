@@ -4,6 +4,7 @@ const fs = require('fs');
 const { execCommand } = require('../../utils/exec');
 const { BASHRC_PATH } = require('../../config/constants');
 const { SERVICES, SERVICE_AUTOSTART } = require('../../config/services');
+const { logEvent } = require('../../services/events.service');
 
 async function handleServicesStatus(req, res) {
   const results = [];
@@ -24,6 +25,7 @@ async function handleServiceStart(req, res) {
     const svc = SERVICES[name];
     if (!svc) return res.status(400).json({ error: 'Unknown service' });
     await execCommand(svc.startCmd);
+    logEvent('service_start', { service: name, label: svc.label });
     setTimeout(() => res.json({ success: true }), 500);
   } catch (e) {
     res.status(400).json({ error: e.message });
@@ -35,6 +37,7 @@ async function handleServiceStop(req, res) {
     const svc = SERVICES[name];
     if (!svc) return res.status(400).json({ error: 'Unknown service' });
     await execCommand(svc.stopCmd);
+    logEvent('service_stop', { service: name, label: svc.label });
     setTimeout(() => res.json({ success: true }), 1000);
   } catch (e) {
     res.status(400).json({ error: e.message });
