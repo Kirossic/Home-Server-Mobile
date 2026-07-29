@@ -108,6 +108,7 @@ window.addEventListener('DOMContentLoaded', () => {
     loadTunnelLinks();
     updateTunnelLinks();
     loadLinks();
+    startLinkStatusRefresh();
     loadProcesses();
     loadServices();
     loadMetrics();
