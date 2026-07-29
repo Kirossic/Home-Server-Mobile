@@ -6,7 +6,7 @@ function execCommand(cmd, options = {}) {
     return new Promise((resolve, reject) => {
         exec(cmd, {timeout, cwd, shell}, (error, stdout, stderr) => {
             const exitCode = error ? (error.code || 1) : 0;
-            if (error) {
+            if (error && exitCode > 1) {
                 console.error(`[exec] exit=${exitCode}\ncmd="${cmd.slice(0, 100)}" \nError: ${error.message}`);
             }
             resolve({ stdout: stdout || '', stderr: stderr || '', exitCode });
