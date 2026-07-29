@@ -1,12 +1,5 @@
 let linksData = [];
 
-async function loadLinksStatus() {
-    try {
-        const res = await authFetch('/api/links/status');
-        return await res.json();
-    } catch(e) { return []; }
-}
-
 async function loadLinks() {
     try {
         const res = await authFetch('/api/links');
@@ -16,13 +9,11 @@ async function loadLinks() {
         linksData.forEach(link => {
             const card = document.createElement('div');
             card.className = 'link-card';
-            const statuses = window._linkStatuses || [];
-            const st = statuses.find(s => s.id === link.id);
-            const dot = st ? (st.online ? '<span style="color:#04d361">●</span>' : '<span style="color:#e53e3e">●</span>') : '';
+            card.dataset.linkId = link.id;
             card.innerHTML = `
                 <div class="link-card-header">
                     <span class="link-icon">${link.icon || '🔗'}</span>
-                    <h3>${link.name} ${dot}</h3>
+                    <h3><span class="link-name">${link.name}</span> <span class="link-dot"></span></h3>
                 </div>
                 <p>${link.desc || ''}</p>
                 <div class="link-card-actions">
@@ -34,11 +25,30 @@ async function loadLinks() {
             container.appendChild(card);
         });
 
-        loadLinksStatus().then(statuses => {
-            window._linkStatuses = statuses;
-            loadLinks();
-        });
+        updateLinkStatus();
     } catch(e) { console.error('loadLinks error', e); }
+}
+
+async function updateLinkStatus() {
+    try {
+        const res = await authFetch('/api/links/status');
+        const statuses = await res.json();
+        document.querySelectorAll('#linksContainer .link-card').forEach(card => {
+            const id = parseInt(card.dataset.linkId);
+            const st = statuses.find(s => s.id === id);
+            const dot = card.querySelector('.link-dot');
+            if (dot) {
+                dot.innerHTML = st ? (st.online ? '<span style="color:#04d361">●</span>' : '<span style="color:#e53e3e">●</span>') : '';
+            }
+        });
+    } catch(e) {}
+}
+
+let linkStatusInterval = null;
+
+function startLinkStatusRefresh() {
+    if (linkStatusInterval) clearInterval(linkStatusInterval);
+    linkStatusInterval = setInterval(updateLinkStatus, 30000);
 }
 
 function showAddLinkForm() {
