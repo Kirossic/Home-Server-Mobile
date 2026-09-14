@@ -269,24 +269,47 @@
         </table>
     </div>
 
-    <div class="links-header" style="margin-top:20px">
-        <h3>📜 Лента событий</h3>
+    <div class="links-header" style="margin-top:20px;flex-wrap:wrap;gap:10px">
+        <h3>📜 Журнал аудита и событий</h3>
         <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-            <select id="eventsType" onchange="loadEvents()" style="background:var(--bg-primary);border:1px solid var(--border);color:#fff;padding:6px 10px;border-radius:4px">
-                <option value="">Все</option>
-                <option value="server_start">Запуск сервера</option>
-                <option value="service_start">Запуск служб</option>
-                <option value="service_stop">Остановка служб</option>
-                <option value="system_restart">Рестарт</option>
-                <option value="links_saved">Ссылки</option>
+            <select id="eventsSource" onchange="loadEvents()" style="background:var(--bg-primary);border:1px solid var(--border);color:#fff;padding:6px 10px;border-radius:4px">
+                <option value="">Все источники</option>
+                <option value="security">🛡 Безопасность</option>
+                <option value="actions">💻 Действия</option>
+                <option value="services">⚙ Службы</option>
+                <option value="telegram">✈ Telegram</option>
+                <option value="system">🖥 Система</option>
+                <option value="http">🌐 HTTP</option>
             </select>
+            <select id="eventsLevel" onchange="loadEvents()" style="background:var(--bg-primary);border:1px solid var(--border);color:#fff;padding:6px 10px;border-radius:4px">
+                <option value="">Все уровни</option>
+                <option value="info">ℹ️ Info</option>
+                <option value="warn">⚠️ Warn</option>
+                <option value="error">❌ Error</option>
+            </select>
+            <input type="text" id="eventsQuery" placeholder="Поиск в событиях..." onkeydown="if(event.key==='Enter')loadEvents()" style="background:var(--bg-primary);border:1px solid var(--border);color:#fff;padding:6px 10px;border-radius:4px;width:160px">
             <button onclick="loadEvents()" style="margin:0">🔄</button>
+        </div>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:12px;background:var(--bg-secondary);padding:10px 14px;border-radius:6px;border:1px solid var(--border)">
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+            <span>💾 <b>База:</b> <span id="dbSizeLabel" style="font-family:monospace;color:var(--accent)">Загрузка...</span></span>
+            <select id="archiveSelector" onchange="onArchiveSelectionChange()" style="background:var(--bg-primary);border:1px solid var(--border);color:#fff;padding:4px 8px;border-radius:4px">
+                <option value="">🔥 Активная база (текущий месяц)</option>
+            </select>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+            <span id="vacuumStatus" style="font-size:12px;color:var(--text-secondary)"></span>
+            <button id="archiveDownloadBtn" onclick="downloadSelectedArchive()" class="btn-sm" style="display:none;margin:0;background:var(--bg-hover);color:#fff">💾 Скачать</button>
+            <button id="archiveRestoreBtn" onclick="restoreSelectedArchive()" class="btn-sm" style="display:none;margin:0;background:#e67e22;color:#fff">♻️ Восстановить</button>
+            <button onclick="triggerArchiveCreation()" class="btn-sm" style="margin:0;background:var(--bg-hover);color:#fff" title="Упаковать прошлый месяц в архив">📦 В архив</button>
+            <button onclick="triggerMaintenance()" class="btn-sm" style="margin:0;background:var(--accent);color:#fff">🧹 VACUUM</button>
         </div>
     </div>
     <div id="eventsContainer" class="process-table-wrap">
         <table class="log-table">
-            <thead><tr><th>Время</th><th>Тип</th><th>Детали</th><th>Уровень</th></tr></thead>
-                            <tbody id="eventsTableBody"></tbody>
+            <thead><tr><th>Время</th><th>Источник</th><th>Тип</th><th>Детали</th><th>Уровень</th></tr></thead>
+            <tbody id="eventsTableBody"></tbody>
         </table>
     </div>
 </div>

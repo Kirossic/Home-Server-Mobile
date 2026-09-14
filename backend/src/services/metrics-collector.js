@@ -3,6 +3,7 @@ const { getDb } = require('../config/database');
 const { execCommand } = require('../utils/exec');
 const { getDiskSpace } = require('../utils/system');
 const { logEvent } = require('./events.service');
+const { startMaintenanceSchedule } = require('./maintenance.service');
 
 let intervals = [];
 
@@ -10,6 +11,7 @@ function startCollector() {
   logEvent('server_start', { uptime: os.uptime(), hostname: os.hostname() });
 
   cleanupOldMetrics();
+  startMaintenanceSchedule();
 
   collectRam();
   collectBattery();

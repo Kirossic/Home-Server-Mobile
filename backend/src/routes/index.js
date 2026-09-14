@@ -15,10 +15,12 @@ const metricsRoutes = require('./api/metrics.routes');
 const eventsRoutes = require('./api/events.routes');
 const tunnelRoutes = require('./api/tunnel.routes');
 const settingsRoutes = require('./api/settings.routes');
+const archiveRoutes = require('./api/archive.routes');
 
 router.use('/autostart', autostartRoutes);
 router.use('/tunnel', tunnelRoutes);
 router.use('/settings', settingsRoutes);
+router.use('/archives', archiveRoutes);
 router.use('/', dashboardRoutes);
 router.use('/files', filesRoutes);
 router.use('/links', linksRoutes);

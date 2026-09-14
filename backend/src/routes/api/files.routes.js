@@ -6,6 +6,7 @@ const os = require('os');
 const archiver = require('archiver');
 const { execCommand } = require('../../utils/exec');
 const { START_DIR } = require('../../config/constants');
+const { logEvent } = require('../../services/events.service');
 
 async function handleFileSearch(req, res) {
     const query = req.query.query;
@@ -54,8 +55,10 @@ async function handleFileSave(req, res) {
     const body = req.body;
     try {
         await fs.promises.writeFile(targetPath, body, 'utf-8');
+        logEvent('file_save', { path: targetPath, size: typeof body === 'string' ? body.length : 0 }, 'info', 'actions');
         res.send('Saved');
     } catch (err) {
+        logEvent('file_save_error', { path: targetPath, error: err.message }, 'error', 'actions');
         res.status(500).send('Ошибка сохранения');
     }
 }
@@ -89,8 +92,10 @@ async function handleFileUpload(req, res) {
             req.on('end', resolve);
             req.on('error', reject);
         });
+        logEvent('file_upload', { path: filePath }, 'info', 'actions');
         res.json({ success: true });
     } catch (err) {
+        logEvent('file_upload_error', { path: filePath, error: err.message }, 'error', 'actions');
         res.status(500).send('Upload failed');
     }
 }
@@ -120,7 +125,11 @@ function handleFileDelete(req, res) {
         if (err) return res.status(404).send('Not found');
         const rmCmd = stats.isDirectory() ? 'rm -rf "' + targetPath + '"' : 'rm "' + targetPath + '"';
         execCommand(rmCmd, (err) => {
-            if (err) return res.status(500).send('Delete failed');
+            if (err) {
+                logEvent('file_delete_error', { path: targetPath, error: err.message }, 'error', 'actions');
+                return res.status(500).send('Delete failed');
+            }
+            logEvent('file_delete', { path: targetPath }, 'info', 'actions');
             res.send('Deleted');
         });
     });
@@ -131,6 +140,7 @@ function handleFileMkdir(req, res) {
     if (!targetPath) return res.status(400).send('Missing path');
     fs.mkdir(targetPath, { recursive: true }, (err) => {
         if (err) return res.status(500).send('Mkdir failed');
+        logEvent('file_mkdir', { path: targetPath }, 'info', 'actions');
         res.send('Created');
     });
 }
@@ -140,6 +150,7 @@ function handleFileCreate(req, res) {
     if (!targetPath) return res.status(400).send('Missing path');
     fs.writeFile(targetPath, '', 'utf-8', (err) => {
         if (err) return res.status(500).send('Create failed');
+        logEvent('file_create', { path: targetPath }, 'info', 'actions');
         res.send('Created');
     });
 }

@@ -6,9 +6,10 @@ const app = express();
 const indexRoutes = require('./routes/index');
 const { PORT, HOST, PANEL_PASSWORD } = require('./config/constants');
 const { getLocalIP } = require('./utils/system');
-const { initDatabase } = require('./config/database');
+const { initDatabase, flushDb } = require('./config/database');
 const { startCollector } = require('./services/metrics-collector');
 const { startPolling } = require('./services/telegram.service');
+const { logEvent, logHttpAccess } = require('./services/events.service');
 const publicDir = path.resolve(__dirname, '../../public'); 
 
 // --- Single Instance PID Lock ---
@@ -43,6 +44,7 @@ function handleSingleInstance() {
           }
         }
       } catch (e) {}
+      flushDb();
     };
 
     process.on('SIGINT', () => { cleanup(); process.exit(0); });
@@ -55,18 +57,67 @@ function handleSingleInstance() {
 
 handleSingleInstance();
 
+// --- Global Exception Logging ---
+process.on('uncaughtException', (err) => {
+  console.error('[server] Uncaught exception:', err.message, err.stack);
+  try {
+    logEvent('uncaught_exception', { error: err.message, stack: err.stack }, 'error', 'system');
+  } catch (e) {}
+});
+
+process.on('unhandledRejection', (reason) => {
+  console.error('[server] Unhandled rejection:', reason);
+  try {
+    logEvent('unhandled_rejection', { reason: String(reason) }, 'error', 'system');
+  } catch (e) {}
+});
+
+// --- HTTP Access Audit Middleware ---
+app.use('/api', (req, res, next) => {
+  const start = Date.now();
+  const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || req.ip;
+  const userAgent = req.headers['user-agent'] || '';
+
+  res.on('finish', () => {
+    const duration = Date.now() - start;
+    // Skip logging high-frequency link polling to avoid database spam
+    if (req.path === '/tunnel/links' && res.statusCode === 200) return;
+
+    logHttpAccess({
+      ip,
+      method: req.method,
+      path: req.originalUrl || req.url,
+      status: res.statusCode,
+      duration_ms: duration,
+      user_agent: userAgent.slice(0, 150)
+    });
+  });
+  next();
+});
+
+// --- Auth Middleware ---
 app.use('/api', (req, res, next) => {
   if (!PANEL_PASSWORD || req.path === '/login') return next();
   const token = req.headers['x-panel-pw'] || '';
-  if (token !== PANEL_PASSWORD) return res.status(401).send('Unauthorized');
+  if (token !== PANEL_PASSWORD) {
+    const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || req.ip;
+    logEvent('auth_unauthorized', { ip, path: req.path }, 'warn', 'security');
+    return res.status(401).send('Unauthorized');
+  }
   next();
 });
+
 app.use(express.json());
 app.use(express.text({ type: ['text/*', 'application/x-sh'], limit: '10mb' }));
 app.use('/api', indexRoutes);
 app.use(express.static(publicDir));
+
+// --- Error Handler ---
 app.use((err, req, res, next) => {
-  console.error(`[error] ${err.method} ${err.url}:`, err.message);
+  console.error(`[error] ${err.method || req.method} ${err.url || req.url}:`, err.message);
+  try {
+    logEvent('http_500_error', { method: req.method, url: req.originalUrl || req.url, error: err.message }, 'error', 'http');
+  } catch (e) {}
   res.status(err.status || 500).json({ error: err.message || 'Internal Server Error' });
 });
 

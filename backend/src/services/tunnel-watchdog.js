@@ -90,8 +90,20 @@ async function sendAlertIfConfigured(text) {
     }
 }
 
+async function reportEventToPanel(type, detail, level = 'info') {
+    try {
+        await fetch('http://127.0.0.1:8080/api/events', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ type, detail, level, source: 'watchdog' }),
+            signal: AbortSignal.timeout(3000)
+        });
+    } catch (e) {}
+}
+
 async function restartTunnel(name, port, logFile) {
     log('warn', `Перезапуск туннеля ${name} (порт ${port})...`);
+    reportEventToPanel('watchdog_tunnel_restart', { name, port }, 'warn');
     state[name].lastRestart = Date.now();
     state[name].failures = 0;
 
@@ -110,6 +122,7 @@ async function restartTunnel(name, port, logFile) {
 
     state[name].url = newUrl;
     log('info', `Туннель ${name} поднят. Новый URL: ${newUrl || '(ожидание)'}`);
+    reportEventToPanel('watchdog_tunnel_restored', { name, port, url: newUrl }, 'info');
 
     if (newUrl) {
         await sendAlertIfConfigured(
@@ -131,6 +144,7 @@ async function checkTunnel(name, port, logFile) {
     if (!alive) {
         state[name].failures++;
         log('warn', `Процесс туннеля ${name} не найден (сбой #${state[name].failures}/${FAILURE_THRESHOLD}).`);
+        reportEventToPanel('watchdog_process_missing', { name, port, failures: state[name].failures }, 'warn');
         if (state[name].failures >= FAILURE_THRESHOLD) {
             await restartTunnel(name, port, logFile);
         }

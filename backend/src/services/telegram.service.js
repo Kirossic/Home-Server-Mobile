@@ -1,4 +1,5 @@
 const { getSettings } = require('./settings.service');
+const { logEvent } = require('./events.service');
 
 let pollingActive = false;
 let pollingAbortController = null;
@@ -58,8 +59,10 @@ async function sendTunnelAlert({ panelUrl, ideUrl, reason = 'Обновлени�
     try {
         await sendTelegramMessage(text);
         console.log('[telegram] Уведомление о туннелях успешно отправлено.');
+        logEvent('telegram_alert', { reason, panelUrl, ideUrl }, 'info', 'telegram');
     } catch (e) {
         console.error('[telegram] Не удалось отправить алерт:', e.message);
+        logEvent('telegram_alert_error', { error: e.message }, 'error', 'telegram');
     }
 }
 
@@ -72,10 +75,12 @@ async function handleBotCommand(message) {
     const configuredChatId = String(settings.telegram.chatId).trim();
     if (configuredChatId && String(chatId) !== configuredChatId) {
         console.warn(`[telegram] Игнорирование команды от неавторизованного chatId: ${chatId}`);
+        logEvent('telegram_unauthorized', { text, chatId }, 'warn', 'telegram');
         return;
     }
 
     const [cmd] = text.split(' ');
+    logEvent('telegram_command', { cmd, chatId }, 'info', 'telegram');
 
     if (cmd === '/start' || cmd === '/help') {
         const welcome = [

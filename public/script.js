@@ -942,20 +942,59 @@ async function loadMetrics() {
     }
 }
 
-async function loadEvents() {
-    const type = document.getElementById('eventsType').value;
-    const tbody = document.getElementById('eventsTableBody');
+async function loadDbStats() {
+    const label = document.getElementById('dbSizeLabel');
+    if (!label) return;
+    try {
+        const res = await authFetch('/api/events/db-stats');
+        const data = await res.json();
+        label.textContent = data.size || 'Неизвестно';
+    } catch(e) {
+        label.textContent = 'Ошибка';
+    }
+}
 
-    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--text-secondary)">Загрузка...</td></tr>';
+async function triggerMaintenance() {
+    const status = document.getElementById('vacuumStatus');
+    if (status) status.textContent = '⏳ Оптимизация и VACUUM...';
+    try {
+        const res = await authFetch('/api/events/maintenance', { method: 'POST' });
+        const data = await res.json();
+        if (data.success && data.stats) {
+            if (status) status.textContent = `✅ Сжато: ${data.stats.startSize} → ${data.stats.endSize}`;
+        } else {
+            if (status) status.textContent = 'Готово';
+        }
+        await loadDbStats();
+        await loadEvents();
+        await loadMetrics();
+    } catch(e) {
+        if (status) status.textContent = '❌ Ошибка оптимизации';
+    }
+}
+
+async function loadEvents() {
+    loadDbStats();
+    const source = document.getElementById('eventsSource')?.value || '';
+    const level = document.getElementById('eventsLevel')?.value || '';
+    const query = document.getElementById('eventsQuery')?.value || '';
+    const tbody = document.getElementById('eventsTableBody');
+    if (!tbody) return;
+
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--text-secondary)">Загрузка...</td></tr>';
 
     try {
-        const url = '/api/events?limit=50' + (type ? '&type=' + type : '');
+        let url = '/api/events?limit=200';
+        if (source) url += '&source=' + encodeURIComponent(source);
+        if (level) url += '&level=' + encodeURIComponent(level);
+        if (query) url += '&query=' + encodeURIComponent(query);
+
         const res = await authFetch(url);
         const data = await res.json();
         tbody.innerHTML = '';
 
         if (!data.rows || data.rows.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--text-secondary)">Нет событий</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--text-secondary)">Нет событий</td></tr>';
             return;
         }
 
@@ -964,15 +1003,20 @@ async function loadEvents() {
             const levelClass = row.level === 'error' ? 'log-error' : (row.level === 'warn' ? 'log-warn' : '');
             let detail = row.detail || '';
             try { const parsed = JSON.parse(detail); detail = JSON.stringify(parsed); } catch(e) {}
+            
+            const sourceBadge = '<span class="log-badge" style="opacity:0.8">' + escapeHtml(row.source || 'system') + '</span>';
+            const typeBadge = '<span class="log-badge ' + levelClass + '">' + escapeHtml(row.type) + '</span>';
+
             tr.innerHTML = '<td>' + (row.ts || '') + '</td>' +
-                '<td><span class="log-badge">' + escapeHtml(row.type) + '</span></td>' +
-                '<td style="font-size:11px;max-width:300px;overflow:hidden;text-overflow:ellipsis">' + escapeHtml(detail) + '</td>' +
+                '<td>' + sourceBadge + '</td>' +
+                '<td>' + typeBadge + '</td>' +
+                '<td style="font-size:11px;max-width:350px;overflow:hidden;text-overflow:ellipsis;word-break:break-all">' + escapeHtml(detail) + '</td>' +
                 '<td>' + escapeHtml(row.level) + '</td>';
             if (levelClass) tr.className = levelClass;
             tbody.appendChild(tr);
         });
     } catch(e) {
-        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--danger)">Ошибка загрузки</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--danger)">Ошибка загрузки</td></tr>';
     }
 }
 

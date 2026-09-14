@@ -10,6 +10,8 @@ const METRICS_LABELS = {
     storage: ['Время', 'Точка монт.', 'Total (GB)', 'Used (GB)', 'Avail (GB)']
 };
 
+let currentArchiveFile = '';
+
 function formatMetricsValue(type, col, val) {
     if (val === null || val === undefined) return '-';
     if (col === 'voltage') return (val / 1000).toFixed(3) + 'V';
@@ -28,11 +30,17 @@ async function loadMetrics() {
     tbody.innerHTML = '<tr><td colspan="' + METRICS_LABELS[type].length + '" style="text-align:center;color:var(--text-secondary)">Загрузка...</td></tr>';
 
     try {
-        const res = await authFetch('/api/metrics/' + type + '?limit=' + limit);
-        const data = await res.json();
+        let url = '/api/metrics/' + type + '?limit=' + limit;
+        if (currentArchiveFile) {
+            url = '/api/archives/' + encodeURIComponent(currentArchiveFile) + '/query?table=metrics_' + type + '&limit=' + limit;
+        }
+
+        const res = await authFetch(url);
+        const resData = await res.json();
+        const data = currentArchiveFile ? (resData.rows || []).slice().reverse() : resData;
         tbody.innerHTML = '';
 
-        if (data.length === 0) {
+        if (!data || data.length === 0) {
             tbody.innerHTML = '<tr><td colspan="' + METRICS_LABELS[type].length + '" style="text-align:center;color:var(--text-secondary)">Нет данных</td></tr>';
             return;
         }
@@ -48,20 +56,151 @@ async function loadMetrics() {
     }
 }
 
-async function loadEvents() {
-    const type = document.getElementById('eventsType').value;
-    const tbody = document.getElementById('eventsTableBody');
+async function loadDbStats() {
+    const label = document.getElementById('dbSizeLabel');
+    if (!label) return;
+    try {
+        const res = await authFetch('/api/events/db-stats');
+        const data = await res.json();
+        label.textContent = data.size || 'Неизвестно';
+    } catch(e) {
+        label.textContent = 'Ошибка';
+    }
+}
 
-    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--text-secondary)">Загрузка...</td></tr>';
+async function loadArchiveList() {
+    const sel = document.getElementById('archiveSelector');
+    if (!sel) return;
+    try {
+        const res = await authFetch('/api/archives');
+        const archives = await res.json();
+        const prev = sel.value;
+        sel.innerHTML = '<option value="">🔥 Активная база (текущий месяц)</option>';
+        archives.forEach(a => {
+            const opt = document.createElement('option');
+            opt.value = a.filename;
+            opt.textContent = `📦 ${a.month} (${a.sizeFormatted})`;
+            sel.appendChild(opt);
+        });
+        if (prev && archives.some(a => a.filename === prev)) {
+            sel.value = prev;
+        }
+    } catch (e) {}
+}
+
+function onArchiveSelectionChange() {
+    const sel = document.getElementById('archiveSelector');
+    currentArchiveFile = sel ? sel.value : '';
+
+    const downloadBtn = document.getElementById('archiveDownloadBtn');
+    const restoreBtn = document.getElementById('archiveRestoreBtn');
+
+    if (currentArchiveFile) {
+        if (downloadBtn) downloadBtn.style.display = 'inline-block';
+        if (restoreBtn) restoreBtn.style.display = 'inline-block';
+    } else {
+        if (downloadBtn) downloadBtn.style.display = 'none';
+        if (restoreBtn) restoreBtn.style.display = 'none';
+    }
+
+    loadEvents();
+    loadMetrics();
+}
+
+function downloadSelectedArchive() {
+    if (!currentArchiveFile) return;
+    window.open('/api/archives/' + encodeURIComponent(currentArchiveFile) + '/download', '_blank');
+}
+
+async function restoreSelectedArchive() {
+    if (!currentArchiveFile) return;
+    if (!confirm(`Восстановить исторические данные из архива "${currentArchiveFile}" в текущую активную базу?`)) return;
+    const status = document.getElementById('vacuumStatus');
+    if (status) status.textContent = '⏳ Восстановление...';
+    try {
+        const res = await authFetch('/api/archives/' + encodeURIComponent(currentArchiveFile) + '/restore', { method: 'POST' });
+        const data = await res.json();
+        if (data.success) {
+            if (status) status.textContent = '✅ Восстановлено!';
+            const sel = document.getElementById('archiveSelector');
+            if (sel) sel.value = '';
+            onArchiveSelectionChange();
+            await loadDbStats();
+        } else {
+            if (status) status.textContent = 'Ошибка восстановления';
+        }
+    } catch(e) {
+        if (status) status.textContent = '❌ Ошибка';
+    }
+}
+
+async function triggerArchiveCreation() {
+    const status = document.getElementById('vacuumStatus');
+    if (status) status.textContent = '⏳ Создание архива...';
+    try {
+        const res = await authFetch('/api/archives/create', { method: 'POST' });
+        const data = await res.json();
+        if (data.success && data.archive) {
+            if (status) status.textContent = `✅ Создан ${data.archive.filename} (${data.archive.sizeFormatted})`;
+        } else {
+            if (status) status.textContent = data.message || 'Нет месяцев для архивации';
+        }
+        await loadArchiveList();
+        await loadDbStats();
+        await loadEvents();
+        await loadMetrics();
+    } catch(e) {
+        if (status) status.textContent = '❌ Ошибка';
+    }
+}
+
+async function triggerMaintenance() {
+    const status = document.getElementById('vacuumStatus');
+    if (status) status.textContent = '⏳ Оптимизация и VACUUM...';
+    try {
+        const res = await authFetch('/api/events/maintenance', { method: 'POST' });
+        const data = await res.json();
+        if (data.success && data.stats) {
+            if (status) status.textContent = `✅ Сжато: ${data.stats.startSize} → ${data.stats.endSize}`;
+        } else {
+            if (status) status.textContent = 'Готово';
+        }
+        await loadArchiveList();
+        await loadDbStats();
+        await loadEvents();
+        await loadMetrics();
+    } catch(e) {
+        if (status) status.textContent = '❌ Ошибка оптимизации';
+    }
+}
+
+async function loadEvents() {
+    loadDbStats();
+    loadArchiveList();
+
+    const source = document.getElementById('eventsSource')?.value || '';
+    const level = document.getElementById('eventsLevel')?.value || '';
+    const query = document.getElementById('eventsQuery')?.value || '';
+    const tbody = document.getElementById('eventsTableBody');
+    if (!tbody) return;
+
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--text-secondary)">Загрузка...</td></tr>';
 
     try {
-        const url = '/api/events?limit=200' + (type ? '&type=' + type : '');
+        let url = '/api/events?limit=200';
+        if (currentArchiveFile) {
+            url = '/api/archives/' + encodeURIComponent(currentArchiveFile) + '/query?table=events&limit=200';
+        }
+        if (source) url += '&source=' + encodeURIComponent(source);
+        if (level) url += '&level=' + encodeURIComponent(level);
+        if (query) url += '&query=' + encodeURIComponent(query);
+
         const res = await authFetch(url);
         const data = await res.json();
         tbody.innerHTML = '';
 
         if (!data.rows || data.rows.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--text-secondary)">Нет событий</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--text-secondary)">Нет событий' + (currentArchiveFile ? ' в архиве' : '') + '</td></tr>';
             return;
         }
 
@@ -70,14 +209,19 @@ async function loadEvents() {
             const levelClass = row.level === 'error' ? 'log-error' : (row.level === 'warn' ? 'log-warn' : '');
             let detail = row.detail || '';
             try { const parsed = JSON.parse(detail); detail = JSON.stringify(parsed); } catch(e) {}
+
+            const sourceBadge = '<span class="log-badge" style="opacity:0.8">' + escapeHtml(row.source || 'system') + '</span>';
+            const typeBadge = '<span class="log-badge ' + levelClass + '">' + escapeHtml(row.type) + '</span>';
+
             tr.innerHTML = '<td>' + (row.ts || '') + '</td>' +
-                '<td><span class="log-badge">' + escapeHtml(row.type) + '</span></td>' +
-                '<td style="font-size:11px;max-width:300px;overflow:hidden;text-overflow:ellipsis">' + escapeHtml(detail) + '</td>' +
+                '<td>' + sourceBadge + '</td>' +
+                '<td>' + typeBadge + '</td>' +
+                '<td style="font-size:11px;max-width:350px;overflow:hidden;text-overflow:ellipsis;word-break:break-all">' + escapeHtml(detail) + '</td>' +
                 '<td>' + escapeHtml(row.level) + '</td>';
             if (levelClass) tr.className = levelClass;
             tbody.appendChild(tr);
         });
     } catch(e) {
-        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--danger)">Ошибка загрузки</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--danger)">Ошибка загрузки</td></tr>';
     }
 }
