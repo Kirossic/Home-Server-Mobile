@@ -73,19 +73,29 @@ let lastHighTempAlertTime = 0;
 
 async function collectBattery() {
   try {
-    const { stdout, exitCode } = await execCommand('termux-battery-status', { timeout: 5000 });
+    const { stdout, exitCode } = await execCommand('termux-battery-status', { timeout: 8000 });
     if (exitCode !== 0 || !stdout) return;
 
     const b = JSON.parse(stdout);
-    if (b.percentage === undefined) return;
+    if (b.percentage === undefined && b.level === undefined) return;
+    const percentage = b.percentage !== undefined ? b.percentage : b.level;
 
-    // Check for power disconnection
+    // Check for power state changes (connected / disconnected)
     if (b.plugged) {
-      if (lastPluggedState && lastPluggedState !== 'UNPLUGGED' && b.plugged === 'UNPLUGGED') {
-        try {
-          const { sendSecurityAlert } = require('./telegram.service');
-          sendSecurityAlert('power_disconnected', { percentage: b.percentage, status: b.status });
-        } catch (e) {}
+      const isCurrentlyUnplugged = b.plugged === 'UNPLUGGED';
+      if (lastPluggedState !== null) {
+        const wasUnplugged = lastPluggedState === 'UNPLUGGED';
+        if (!wasUnplugged && isCurrentlyUnplugged) {
+          try {
+            const { sendSecurityAlert } = require('./telegram.service');
+            sendSecurityAlert('power_disconnected', { percentage, status: b.status });
+          } catch (e) {}
+        } else if (wasUnplugged && !isCurrentlyUnplugged) {
+          try {
+            const { sendSecurityAlert } = require('./telegram.service');
+            sendSecurityAlert('power_connected', { percentage, plugged: b.plugged });
+          } catch (e) {}
+        }
       }
       lastPluggedState = b.plugged;
     }
@@ -95,14 +105,14 @@ async function collectBattery() {
       lastHighTempAlertTime = Date.now();
       try {
         const { sendSecurityAlert } = require('./telegram.service');
-        sendSecurityAlert('battery_temp_high', { temperature: b.temperature, percentage: b.percentage });
+        sendSecurityAlert('battery_temp_high', { temperature: b.temperature, percentage });
       } catch (e) {}
     }
 
     getDb().run(
       `INSERT INTO metrics_battery (percentage, status, temperature, voltage, health, cycles)
        VALUES (?, ?, ?, ?, ?, ?)`,
-      [b.percentage, b.status || 'unknown', b.temperature || null, b.voltage || null, b.health || null, b.cycles || null]
+      [percentage, b.status || 'unknown', b.temperature || null, b.voltage || null, b.health || null, b.cycles || b.cycle || null]
     );
   } catch (err) {
     // Battery command may not be available — skip silently

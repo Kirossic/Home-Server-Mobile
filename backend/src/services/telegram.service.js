@@ -155,7 +155,7 @@ async function sendSecurityAlert(type, payload = {}) {
     if (!tg || !tg.enabled || !tg.botToken || !tg.chatId) return;
 
     if (type === 'auth_failed' && tg.notifyOnAuthFailure === false) return;
-    if ((type === 'battery_temp_high' || type === 'power_disconnected') && tg.notifyOnBatteryAlert === false) return;
+    if ((type === 'battery_temp_high' || type === 'power_disconnected' || type === 'power_connected') && tg.notifyOnBatteryAlert === false) return;
     if (type === 'server_error' && tg.notifyOnServerError === false) return;
 
     // Rate-limiting: 60 sec cooldown per alert type
@@ -195,6 +195,16 @@ async function sendSecurityAlert(type, payload = {}) {
             `🕒 <i>${ts}</i>`,
             '',
             '⚠️ <i>Сервер перешёл на работу от встроенного аккумулятора!</i>'
+        ].join('\n');
+    } else if (type === 'power_connected') {
+        text = [
+            '⚡ <b>ПИТАНИЕ ВОССТАНОВЛЕНО!</b>',
+            '',
+            `🔋 <b>Текущий заряд:</b> <code>${payload.percentage}%</code>`,
+            `🔌 <b>Источник:</b> <code>${payload.plugged || 'Подключено к сети'}</code>`,
+            `🕒 <i>${ts}</i>`,
+            '',
+            '✅ <i>Телефон снова заряжается от внешнего источника питания.</i>'
         ].join('\n');
     } else if (type === 'server_error') {
         text = [
@@ -246,30 +256,85 @@ async function getServicesStatus() {
     return results;
 }
 
+let cachedBatteryStatus = null;
+let lastBatteryFetch = 0;
+
+function formatBatteryMode(b) {
+    const rawPlugged = (b.plugged || '').toUpperCase();
+    const rawStatus = (b.status || '').toUpperCase();
+
+    const isPlugged = rawPlugged.startsWith('PLUGGED') && rawPlugged !== 'UNPLUGGED';
+    const isCharging = rawStatus === 'CHARGING';
+    const isFull = rawStatus === 'FULL';
+
+    if (isFull && isPlugged) {
+        return '🟢 Батарея заряжена (100%, от сети)';
+    }
+
+    if (isCharging || isPlugged) {
+        if (rawPlugged.includes('AC')) return '⚡ Зарядка от сети (AC)';
+        if (rawPlugged.includes('USB')) return '🔌 Зарядка по USB';
+        if (rawPlugged.includes('WIRELESS')) return '📶 Беспроводная зарядка';
+        return '⚡ Зарядка подключена';
+    }
+
+    if (rawStatus === 'DISCHARGING' || rawPlugged === 'UNPLUGGED') {
+        return '🔋 Работа от аккумулятора (разряжается)';
+    }
+
+    return '🔋 ' + (b.status || 'От аккумулятора');
+}
+
 async function getBatteryStatus() {
+    const now = Date.now();
+    // Cache for 10 seconds to avoid spamming termux-api broadcast
+    if (cachedBatteryStatus && (now - lastBatteryFetch < 10000)) {
+        return cachedBatteryStatus;
+    }
+
     const { execCommand } = require('../utils/exec');
     try {
-        const { stdout, exitCode } = await execCommand('termux-battery-status', { timeout: 5000 });
+        // Run with 8000ms timeout to handle device wakeups
+        const { stdout, exitCode } = await execCommand('termux-battery-status', { timeout: 8000 });
         if (exitCode === 0 && stdout) {
-            return JSON.parse(stdout);
+            const b = JSON.parse(stdout);
+            if (b && (b.percentage !== undefined || b.level !== undefined)) {
+                cachedBatteryStatus = b;
+                lastBatteryFetch = now;
+                return b;
+            }
         }
     } catch (e) {}
 
-    const fs = require('fs');
+    // Fallback 1: Return memory cache even if slightly older
+    if (cachedBatteryStatus) {
+        return cachedBatteryStatus;
+    }
+
+    // Fallback 2: Read latest record from SQLite metrics_battery table
     try {
-        const capacity = fs.readFileSync('/sys/class/power_supply/battery/capacity', 'utf-8').trim();
-        const status = fs.readFileSync('/sys/class/power_supply/battery/status', 'utf-8').trim();
-        let temp = null;
-        if (fs.existsSync('/sys/class/power_supply/battery/temp')) {
-            temp = (parseInt(fs.readFileSync('/sys/class/power_supply/battery/temp', 'utf-8').trim(), 10) / 10).toFixed(1);
+        const { getDb } = require('../config/database');
+        const row = getDb().get(`
+            SELECT percentage, status, temperature, voltage, health, cycles, ts
+            FROM metrics_battery
+            ORDER BY id DESC
+            LIMIT 1
+        `);
+        if (row && row.percentage !== undefined) {
+            const isChg = (row.status && row.status.toUpperCase() === 'CHARGING');
+            return {
+                percentage: row.percentage,
+                level: row.percentage,
+                status: row.status,
+                plugged: isChg ? 'PLUGGED_AC' : 'UNPLUGGED',
+                temperature: row.temperature,
+                voltage: row.voltage,
+                health: row.health || 'GOOD',
+                cycle: row.cycles || '—',
+                isHistoricalFallback: true,
+                recordedAt: row.ts
+            };
         }
-        return {
-            percentage: parseInt(capacity, 10),
-            status,
-            plugged: status.toUpperCase().includes('CHARGING') ? 'PLUGGED' : 'UNPLUGGED',
-            temperature: temp ? parseFloat(temp) : null,
-            health: 'GOOD'
-        };
     } catch (e) {}
 
     return null;
@@ -362,8 +427,7 @@ async function executeBotAction(action, { chatId, arg = '' }) {
         }
 
         const pct = b.percentage !== undefined ? b.percentage : b.level;
-        const isCharging = b.plugged === 'PLUGGED' || (b.status && b.status.toUpperCase().includes('CHARGING'));
-        const plugIcon = isCharging ? '⚡ Зарядка подключена' : '🔋 Работа от аккумулятора';
+        const modeText = formatBatteryMode(b);
 
         let tempInfo = 'неизвестно';
         if (b.temperature !== undefined && b.temperature !== null) {
@@ -376,15 +440,25 @@ async function executeBotAction(action, { chatId, arg = '' }) {
         const healthInfo = b.health || 'GOOD';
         const cyclesInfo = b.cycle !== undefined ? b.cycle : (b.cycles || '—');
 
+        let currentInfo = '';
+        if (b.current !== undefined && b.current !== null) {
+            const mA = Math.round(b.current / 1000);
+            if (mA !== 0) {
+                currentInfo = `\n⚡ Ток: <code>${mA > 0 ? '+' : ''}${mA} мА</code>`;
+            }
+        }
+
+        const fallbackNote = b.isHistoricalFallback ? `\n\n<i>⚠️ Данные из кэша (${b.recordedAt})</i>` : '';
+
         const msg = [
             '🔋 <b>Состояние батареи Redmi:</b>',
             '',
             `Уровень: [${renderProgressBar(pct, 10)}] <b>${pct}%</b>`,
-            `Режим: <b>${plugIcon}</b>`,
+            `Режим: <b>${modeText}</b>${currentInfo}`,
             `🌡 Температура: <b>${tempInfo}</b>`,
             `⚡ Напряжение: <code>${voltageInfo}</code>`,
             `🩺 Здоровье: <b>${healthInfo}</b>`,
-            `🔄 Циклов зарядки: <code>${cyclesInfo}</code>`
+            `🔄 Циклов зарядки: <code>${cyclesInfo}</code>${fallbackNote}`
         ].join('\n');
 
         await sendTelegramMessage(msg, { chatId, replyMarkup: getMainMenuKeyboard() });
