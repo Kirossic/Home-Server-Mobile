@@ -46,18 +46,14 @@ async function handleStats(req, res) {
     }
 }
 
-let batteryLock = false;
+const { getBatteryStatus } = require('../../services/battery.service');
+
 async function handleBattery(req, res) {
-    if (batteryLock) return res.status(429).json({ error: 'busy' });
-    batteryLock = true;
     try {
-        const { stdout } = await execCommand('termux-battery-status', { timeout: 5000 });
-        batteryLock = false;
-        await execCommand('pkill -f "termux-api BatteryStatus" 2>/dev/null', { timeout: 5000 });
-        try { res.json(JSON.parse(stdout)); }
-        catch (e) { res.status(500).json({ error: 'parse failed' }); }
+        const data = await getBatteryStatus();
+        if (!data) return res.status(500).json({ error: 'battery info unavailable' });
+        res.json(data);
     } catch (err) {
-        batteryLock = false;
         res.status(500).json({ error: 'battery info unavailable' });
     }
 }

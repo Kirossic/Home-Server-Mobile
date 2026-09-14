@@ -70,16 +70,16 @@ function collectRam() {
   }
 }
 
+const { getBatteryStatus } = require('./battery.service');
+
 let lastPluggedState = null;
 let lastHighTempAlertTime = 0;
 
 async function checkPowerStatus() {
   try {
-    const { stdout, exitCode } = await execCommand('termux-battery-status', { timeout: 4000 });
-    if (exitCode !== 0 || !stdout) return;
+    const b = await getBatteryStatus({ maxAgeMs: 5000 });
+    if (!b || b.isHistoricalFallback) return;
 
-    const b = JSON.parse(stdout);
-    if (!b || (b.percentage === undefined && b.level === undefined)) return;
     const percentage = b.percentage !== undefined ? b.percentage : b.level;
     const currentPlugged = b.plugged || 'UNPLUGGED';
 
@@ -118,41 +118,11 @@ async function checkPowerStatus() {
 
 async function collectBattery() {
   try {
-    const { stdout, exitCode } = await execCommand('termux-battery-status', { timeout: 8000 });
-    if (exitCode !== 0 || !stdout) return;
+    const b = await getBatteryStatus({ forceFresh: true });
+    if (!b || b.isHistoricalFallback) return;
 
-    const b = JSON.parse(stdout);
-    if (b.percentage === undefined && b.level === undefined) return;
     const percentage = b.percentage !== undefined ? b.percentage : b.level;
-
-    // Check for power state changes (connected / disconnected)
-    if (b.plugged) {
-      const isCurrentlyUnplugged = b.plugged === 'UNPLUGGED';
-      if (lastPluggedState !== null) {
-        const wasUnplugged = lastPluggedState === 'UNPLUGGED';
-        if (!wasUnplugged && isCurrentlyUnplugged) {
-          try {
-            const { sendSecurityAlert } = require('./telegram.service');
-            sendSecurityAlert('power_disconnected', { percentage, status: b.status });
-          } catch (e) {}
-        } else if (wasUnplugged && !isCurrentlyUnplugged) {
-          try {
-            const { sendSecurityAlert } = require('./telegram.service');
-            sendSecurityAlert('power_connected', { percentage, plugged: b.plugged });
-          } catch (e) {}
-        }
-      }
-      lastPluggedState = b.plugged;
-    }
-
-    // Check for overheat (> 44°C) with 10 min cooldown
-    if (b.temperature && b.temperature >= 44 && (Date.now() - lastHighTempAlertTime > 600000)) {
-      lastHighTempAlertTime = Date.now();
-      try {
-        const { sendSecurityAlert } = require('./telegram.service');
-        sendSecurityAlert('battery_temp_high', { temperature: b.temperature, percentage });
-      } catch (e) {}
-    }
+    if (percentage === undefined || percentage === null) return;
 
     getDb().run(
       `INSERT INTO metrics_battery (percentage, status, temperature, voltage, health, cycles)
