@@ -11,11 +11,13 @@ async function handleSystemRestart(req, res) {
 
     const killAndRestartCmd = [
         '( pkill -f "cloudflared"',
+        'pkill -f "tunnel-watchdog.js"',
         'pg_ctl -D "' + PG_DIR + '" stop 2>/dev/null || pkill -f "postgres"',
-        'kill -9 $(lsof -t -i:8085) 2>/dev/null',
-        'kill -9 $(lsof -t -i:8080) 2>/dev/null',
+        'pkill -9 -f "code-server"',
+        'pkill -9 -f "Bukings.*server.js"',
+        'pkill -9 -f "node backend/src/server.js"',
         'for i in 1 2 3 4 5; do',
-        '  fuser 8080/tcp 2>/dev/null || break',
+        '  pgrep -f "node backend/src/server.js" >/dev/null 2>&1 || break',
         '  sleep 1',
         'done',
         'source ' + BASHRC_PATH + ' ) &'
