@@ -55,17 +55,28 @@
                     </div>
 
                     <div class="section" style="background: #222; padding: 15px; border-radius: 8px; margin-bottom: 20px; color: #fff;">
-                        <h3>🌐 Внешний доступ (Cloudflare Tunnels)</h3>
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 12px;">
+                            <h3 style="margin:0;">🌐 Внешний доступ (Cloudflare Tunnels)</h3>
+                            <button id="tg-modal-btn" onclick="openTelegramModal()" class="btn" style="background: #2196F3; color: #fff; padding: 4px 10px; font-size: 12px; border-radius: 4px; margin:0; cursor:pointer;" title="Настройка Telegram-оповещений">✈️ Telegram</button>
+                        </div>
                         
                         <div style="margin-bottom: 15px;">
-                            <p style="margin-bottom: 5px;"><strong>Адрес этой Панели:</strong></p>
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 5px;">
+                                <p style="margin:0;"><strong>Адрес этой Панели:</strong></p>
+                                <span id="tunnel-panel-status" style="font-size:12px; font-weight:bold; color:#aaa;">Проверка...</span>
+                            </div>
                             <a id="tunnel-panel-link" href="#" target="_blank" class="btn" style="display: inline-block; background: #4CAF50; color: #fff; padding: 8px 12px; border-radius: 4px; text-decoration: none; font-weight: bold; text-align: center; width: 100%;">Обновление ссылки...</a>
                         </div>
 
                         <div>
-                            <p style="margin-bottom: 5px;"><strong>Адрес среды разработки IDE:</strong></p>
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 5px;">
+                                <p style="margin:0;"><strong>Адрес среды разработки IDE:</strong></p>
+                                <span id="tunnel-ide-status" style="font-size:12px; font-weight:bold; color:#aaa;">Проверка...</span>
+                            </div>
                             <a id="tunnel-ide-link" href="#" target="_blank" class="btn" style="display: inline-block; background: #00bcd4; color: #fff; padding: 8px 12px; border-radius: 4px; text-decoration: none; font-weight: bold; text-align: center; width: 100%;">🚀 Открыть IDE с кодом</a>
                         </div>
+
+                        <button id="tunnel-restart-btn" onclick="restartTunnels()" class="btn" style="display:block; background: #ff9800; color: #fff; padding: 8px 12px; border-radius: 4px; font-weight: bold; width: 100%; margin-top: 14px; cursor: pointer; border: none;">🔄 Перезапустить туннели</button>
                     </div>
 
                     <button class="btn-danger" onclick="triggerSystemRestart()">Перезапустить всё</button>
@@ -166,6 +177,7 @@
                         <option value="code-server">code-server</option>
                         <option value="panel_tunnel">panel_tunnel</option>
                         <option value="ide_tunnel">ide_tunnel</option>
+                        <option value="tunnel_watchdog">tunnel_watchdog</option>
                     </select>
                     <button onclick="loadLogs()" style="margin:0">🔄</button>
                     <button onclick="document.getElementById('logOutput').textContent=''" style="margin:0;background:var(--bg-hover);color:#fff">✕ Очистить</button>
@@ -274,12 +286,49 @@
     <div id="eventsContainer" class="process-table-wrap">
         <table class="log-table">
             <thead><tr><th>Время</th><th>Тип</th><th>Детали</th><th>Уровень</th></tr></thead>
-            <tbody id="eventsTableBody"></tbody>
+                            <tbody id="eventsTableBody"></tbody>
         </table>
     </div>
 </div>
 
-<!-- Login Overlay -->
+    <!-- Telegram Settings Modal -->
+    <div id="telegramOverlay" class="overlay" style="display:none">
+        <div class="modal" style="max-width:440px">
+            <h2 style="margin-bottom:8px">✈️ Настройка Telegram-бота</h2>
+            <p style="color:var(--text-secondary);margin-bottom:16px;font-size:13px">
+                Бот автоматически отправляет новые ссылки на Панель и IDE при перезапуске туннелей, а также отвечает на команды /tunnels, /status и /restart_tunnels.
+            </p>
+            
+            <div style="margin-bottom:12px">
+                <label style="display:block;font-size:12px;color:var(--text-secondary);margin-bottom:4px">Токен бота (@BotFather):</label>
+                <div style="display:flex;gap:6px">
+                    <input type="password" id="tgBotToken" placeholder="123456789:ABCdefGHI..." style="flex:1">
+                    <button type="button" onclick="toggleTgTokenVisibility()" style="margin:0;padding:6px 10px;background:var(--bg-hover);color:#fff">👁</button>
+                </div>
+                <small style="color:#888;font-size:11px">Маскированное значение не перезаписывается при сохранении.</small>
+            </div>
+
+            <div style="margin-bottom:12px">
+                <label style="display:block;font-size:12px;color:var(--text-secondary);margin-bottom:4px">Chat ID (ваш ID или ID группы):</label>
+                <input type="text" id="tgChatId" placeholder="Например: 123456789" style="width:100%">
+            </div>
+
+            <div style="margin-bottom:16px;display:flex;align-items:center;gap:8px">
+                <input type="checkbox" id="tgNotifyOnRestart" checked style="width:auto">
+                <label for="tgNotifyOnRestart" style="font-size:13px;cursor:pointer">Уведомлять о смене ссылок туннелей</label>
+            </div>
+
+            <div id="tgStatusMsg" style="font-size:13px;margin-bottom:12px;display:none"></div>
+
+            <div class="modal-actions" style="display:flex;gap:8px">
+                <button type="button" onclick="testTelegramSettings()" id="tgTestBtn" style="background:#00bcd4;color:#fff;flex:1">🔔 Тест</button>
+                <button type="button" onclick="saveTelegramSettings()" id="tgSaveBtn" style="background:#4CAF50;color:#fff;flex:1">💾 Сохранить</button>
+                <button type="button" onclick="closeTelegramModal()" style="background:var(--bg-hover);color:#fff;flex:1">✕ Закрыть</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Login Overlay -->
     <div id="loginOverlay" class="overlay" style="display:none">
         <div class="modal" style="text-align:center">
             <h2 style="margin-bottom:8px">🔐 Требуется авторизация</h2>

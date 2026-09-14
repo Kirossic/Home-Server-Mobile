@@ -6,8 +6,9 @@ const os = require('os');
 const { execCommand } = require('../../utils/exec');
 
 async function handleLogs(req, res) {
-    const name = req.query.name || 'main-server';
-    const lines = req.query.lines || 100;
+    const rawName = req.query.name || 'main-server';
+    const name = rawName.replace(/[^a-zA-Z0-9_-]/g, '');
+    const lines = parseInt(req.query.lines, 10) || 100;
     const projectRoot = path.resolve(__dirname, '../../../../');
     const candidates = [
         path.join(projectRoot, name + '.log'),

@@ -13,8 +13,12 @@ const systemRoutes = require('./api/system.routes');
 const terminalRoutes = require('./api/terminal.routes');
 const metricsRoutes = require('./api/metrics.routes');
 const eventsRoutes = require('./api/events.routes');
+const tunnelRoutes = require('./api/tunnel.routes');
+const settingsRoutes = require('./api/settings.routes');
 
 router.use('/autostart', autostartRoutes);
+router.use('/tunnel', tunnelRoutes);
+router.use('/settings', settingsRoutes);
 router.use('/', dashboardRoutes);
 router.use('/files', filesRoutes);
 router.use('/links', linksRoutes);

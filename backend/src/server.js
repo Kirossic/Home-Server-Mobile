@@ -7,6 +7,7 @@ const { PORT, HOST, PANEL_PASSWORD } = require('./config/constants');
 const { getLocalIP } = require('./utils/system');
 const { initDatabase } = require('./config/database');
 const { startCollector } = require('./services/metrics-collector');
+const { startPolling } = require('./services/telegram.service');
 const publicDir = path.resolve(__dirname, '../../public'); 
 
 app.use('/api', (req, res, next) => {
@@ -16,6 +17,7 @@ app.use('/api', (req, res, next) => {
   next();
 });
 app.use(express.json());
+app.use(express.text({ type: ['text/*', 'application/x-sh'], limit: '10mb' }));
 app.use('/api', indexRoutes);
 app.use(express.static(publicDir));
 app.use((err, req, res, next) => {
@@ -29,6 +31,7 @@ app.get('/', (req, res) => {
 
 initDatabase().then(() => {
   startCollector();
+  startPolling();
   app.listen(PORT, HOST, () => {
     const localIP = getLocalIP();
     console.log(`Сервер успешно запущен!`);

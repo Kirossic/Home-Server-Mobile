@@ -189,6 +189,8 @@ async function loadTunnelLinks() {
     }
 }
 
+let tunnelPollInterval = null;
+
 async function updateTunnelLinks() {
     try {
         const response = await authFetch('/api/tunnel/links');
@@ -196,19 +198,103 @@ async function updateTunnelLinks() {
 
         const panelLink = document.getElementById('tunnel-panel-link');
         const ideLink = document.getElementById('tunnel-ide-link');
+        const panelStatus = document.getElementById('tunnel-panel-status');
+        const ideStatus = document.getElementById('tunnel-ide-status');
 
-        if (panelLink && data.panelUrl) {
-            panelLink.href = data.panelUrl;
-            panelLink.innerText = data.panelUrl.includes('trycloudflare') ? "Открыть Панель Управления" : data.panelUrl;
+        if (panelStatus) {
+            if (data.status === 'restarting') {
+                panelStatus.innerHTML = '<span style="color:#ffb300">⏳ Запуск...</span>';
+            } else if (data.panelRunning && data.panelUrl && data.panelUrl.startsWith('http')) {
+                panelStatus.innerHTML = '<span style="color:#4CAF50">🟢 Онлайн</span>';
+            } else if (data.panelRunning) {
+                panelStatus.innerHTML = '<span style="color:#ffb300">🟡 Инициализация...</span>';
+            } else {
+                panelStatus.innerHTML = '<span style="color:#f44336">🔴 Остановлен</span>';
+            }
         }
 
-        if (ideLink && data.ideUrl) {
-            ideLink.href = data.ideUrl + "/?folder=/data/data/com.termux/files/home/projects/main-server";
-            ideLink.innerText = data.ideUrl.includes('trycloudflare') ? "🚀 Открыть IDE с кодом" : data.ideUrl;
+        if (ideStatus) {
+            if (data.status === 'restarting') {
+                ideStatus.innerHTML = '<span style="color:#ffb300">⏳ Запуск...</span>';
+            } else if (data.ideRunning && data.ideUrl && data.ideUrl.startsWith('http')) {
+                ideStatus.innerHTML = '<span style="color:#4CAF50">🟢 Онлайн</span>';
+            } else if (data.ideRunning) {
+                ideStatus.innerHTML = '<span style="color:#ffb300">🟡 Инициализация...</span>';
+            } else {
+                ideStatus.innerHTML = '<span style="color:#f44336">🔴 Остановлен</span>';
+            }
         }
+
+        if (panelLink) {
+            if (data.panelUrl && data.panelUrl.startsWith('http')) {
+                panelLink.href = data.panelUrl;
+                panelLink.innerText = "Открыть Панель Управления";
+                panelLink.style.pointerEvents = 'auto';
+                panelLink.style.opacity = '1';
+            } else {
+                panelLink.removeAttribute('href');
+                panelLink.innerText = data.panelUrl || "Недоступен";
+                panelLink.style.pointerEvents = 'none';
+                panelLink.style.opacity = '0.6';
+            }
+        }
+
+        if (ideLink) {
+            if (data.ideUrl && data.ideUrl.startsWith('http')) {
+                ideLink.href = data.ideUrl + "/?folder=/data/data/com.termux/files/home/projects/main-server";
+                ideLink.innerText = "🚀 Открыть IDE с кодом";
+                ideLink.style.pointerEvents = 'auto';
+                ideLink.style.opacity = '1';
+            } else {
+                ideLink.removeAttribute('href');
+                ideLink.innerText = data.ideUrl || "Недоступен";
+                ideLink.style.pointerEvents = 'none';
+                ideLink.style.opacity = '0.6';
+            }
+        }
+
+        return data;
     } catch (error) {
         console.error("Ошибка обновления ссылок:", error);
     }
+}
+
+async function restartTunnels() {
+    const btn = document.getElementById('tunnel-restart-btn');
+    if (!confirm('Перезапустить туннели Cloudflare? Адреса внешнего доступа обновятся.')) return;
+
+    if (btn) {
+        btn.disabled = true;
+        btn.innerText = '⏳ Перезапуск туннелей...';
+        btn.style.opacity = '0.7';
+    }
+
+    try {
+        await authFetch('/api/tunnel/restart', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ target: 'all' })
+        });
+    } catch (e) {
+        console.error('Ошибка отправки команды перезапуска:', e);
+    }
+
+    if (tunnelPollInterval) clearInterval(tunnelPollInterval);
+    let attempts = 0;
+
+    tunnelPollInterval = setInterval(async () => {
+        attempts++;
+        const state = await updateTunnelLinks();
+        if ((state && state.status === 'ready' && state.panelRunning && state.ideRunning) || attempts >= 15) {
+            clearInterval(tunnelPollInterval);
+            tunnelPollInterval = null;
+            if (btn) {
+                btn.disabled = false;
+                btn.innerText = '🔄 Перезапустить туннели';
+                btn.style.opacity = '1';
+            }
+        }
+    }, 2000);
 }
 
 async function loadProjectsForIDE() {
@@ -239,3 +325,110 @@ async function triggerSystemRestart() {
         window.location.reload();
     }, 3000);
 }
+
+async function openTelegramModal() {
+    const overlay = document.getElementById('telegramOverlay');
+    const statusMsg = document.getElementById('tgStatusMsg');
+    if (statusMsg) statusMsg.style.display = 'none';
+    if (overlay) overlay.style.display = 'flex';
+
+    try {
+        const res = await authFetch('/api/settings/telegram');
+        const data = await res.json();
+        if (data) {
+            document.getElementById('tgBotToken').value = data.botTokenMasked || '';
+            document.getElementById('tgChatId').value = data.chatId || '';
+            document.getElementById('tgNotifyOnRestart').checked = data.notifyOnTunnelRestart !== false;
+            
+            if (data.configured) {
+                showTgStatus('✅ Бот настроен и готов к отправке уведомлений.', '#4CAF50');
+            } else {
+                showTgStatus('ℹ️ Токен бота еще не задан.', '#ffb300');
+            }
+        }
+    } catch (e) {
+        console.error('Ошибка загрузки настроек Telegram:', e);
+    }
+}
+
+function closeTelegramModal() {
+    const overlay = document.getElementById('telegramOverlay');
+    if (overlay) overlay.style.display = 'none';
+}
+
+function toggleTgTokenVisibility() {
+    const input = document.getElementById('tgBotToken');
+    if (!input) return;
+    input.type = input.type === 'password' ? 'text' : 'password';
+}
+
+function showTgStatus(msg, color = '#fff') {
+    const el = document.getElementById('tgStatusMsg');
+    if (!el) return;
+    el.style.display = 'block';
+    el.style.color = color;
+    el.innerHTML = msg;
+}
+
+async function saveTelegramSettings() {
+    const btn = document.getElementById('tgSaveBtn');
+    const botToken = document.getElementById('tgBotToken').value.trim();
+    const chatId = document.getElementById('tgChatId').value.trim();
+    const notifyOnTunnelRestart = document.getElementById('tgNotifyOnRestart').checked;
+
+    if (btn) btn.disabled = true;
+    showTgStatus('⏳ Сохранение...', '#ffb300');
+
+    try {
+        const res = await authFetch('/api/settings/telegram', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ botToken, chatId, notifyOnTunnelRestart })
+        });
+        const data = await res.json();
+        if (data && data.success) {
+            showTgStatus('✅ Настройки успешно сохранены!', '#4CAF50');
+            if (data.settings && data.settings.botTokenMasked) {
+                document.getElementById('tgBotToken').value = data.settings.botTokenMasked;
+            }
+        } else {
+            showTgStatus('❌ ' + (data.error || 'Ошибка сохранения'), '#f44336');
+        }
+    } catch (e) {
+        showTgStatus('❌ Ошибка сети при сохранении', '#f44336');
+    } finally {
+        if (btn) btn.disabled = false;
+    }
+}
+
+async function testTelegramSettings() {
+    const btn = document.getElementById('tgTestBtn');
+    const botToken = document.getElementById('tgBotToken').value.trim();
+    const chatId = document.getElementById('tgChatId').value.trim();
+
+    if (btn) btn.disabled = true;
+    showTgStatus('⏳ Отправка тестового сообщения...', '#ffb300');
+
+    try {
+        const payload = {};
+        if (botToken && !botToken.includes('...')) payload.botToken = botToken;
+        if (chatId) payload.chatId = chatId;
+
+        const res = await authFetch('/api/settings/telegram/test', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (data && data.success) {
+            showTgStatus('✅ Сообщение успешно доставлено в Telegram!', '#4CAF50');
+        } else {
+            showTgStatus('❌ ' + (data.error || 'Сбой отправки теста'), '#f44336');
+        }
+    } catch (e) {
+        showTgStatus('❌ Ошибка сети при отправке теста', '#f44336');
+    } finally {
+        if (btn) btn.disabled = false;
+    }
+}
+

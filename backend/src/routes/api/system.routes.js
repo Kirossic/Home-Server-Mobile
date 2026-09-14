@@ -1,7 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const { execCommand } = require('../../utils/exec');
-const { BASHRC_PATH } = require('../../config/constants');
+const { BASHRC_PATH, PG_DIR } = require('../../config/constants');
+const { getShellPath } = require('../../utils/system');
 const { logEvent } = require('../../services/events.service');
 
 async function handleSystemRestart(req, res) {
@@ -10,7 +11,7 @@ async function handleSystemRestart(req, res) {
 
     const killAndRestartCmd = [
         '( pkill -f "cloudflared"',
-        'pkill -f "postgres"',
+        'pg_ctl -D "' + PG_DIR + '" stop 2>/dev/null || pkill -f "postgres"',
         'kill -9 $(lsof -t -i:8085) 2>/dev/null',
         'kill -9 $(lsof -t -i:8080) 2>/dev/null',
         'for i in 1 2 3 4 5; do',
@@ -19,7 +20,7 @@ async function handleSystemRestart(req, res) {
         'done',
         'source ' + BASHRC_PATH + ' ) &'
     ].join('\n');
-    setTimeout(() => execCommand(killAndRestartCmd, { shell: '/bin/bash', timeout: 5000 }), 2000);
+    setTimeout(() => execCommand(killAndRestartCmd, { shell: getShellPath(), timeout: 10000 }), 2000);
 }
 
 router.post('/restart', handleSystemRestart);

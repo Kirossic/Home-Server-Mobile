@@ -1,6 +1,13 @@
 const os = require('os');
+const fs = require('fs');
 const { execCommand } = require('./exec');
-const { stdout } = require('process');
+
+function getShellPath() {
+    const termuxBash = '/data/data/com.termux/files/usr/bin/bash';
+    if (fs.existsSync(termuxBash)) return termuxBash;
+    if (fs.existsSync('/bin/bash')) return '/bin/bash';
+    return process.env.SHELL || '/bin/sh';
+}
 
 function getDiskSpace() {
     return execCommand('df -h /data 2>/dev/null').then(({stdout}) => {
@@ -23,4 +30,4 @@ function getLocalIP() {
     return '127.0.0.1';
 }
 
-module.exports = { getDiskSpace, getLocalIP };
+module.exports = { getDiskSpace, getLocalIP, getShellPath };

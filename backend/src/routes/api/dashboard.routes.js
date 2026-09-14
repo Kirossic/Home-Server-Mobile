@@ -46,24 +46,6 @@ async function handleStats(req, res) {
     }
 }
 
-function handleTunnelLinks(req, res) {
-    const panelLogPath = path.join(os.homedir(), 'panel_tunnel.log');
-    const ideLogPath = path.join(os.homedir(), 'ide_tunnel.log');
-    let panelUrl = 'Генерация...';
-    let ideUrl = 'Генерация...';
-    if (fs.existsSync(panelLogPath)) {
-        const d = fs.readFileSync(panelLogPath, 'utf-8');
-        const m = d.match(/https:\/\/[a-zA-Z0-9-]+\.trycloudflare\.com/g) || [];
-        if (m.length > 0) panelUrl = m[m.length - 1];
-    }
-    if (fs.existsSync(ideLogPath)) {
-        const d = fs.readFileSync(ideLogPath, 'utf-8');
-        const m = d.match(/https:\/\/[a-zA-Z0-9-]+\.trycloudflare\.com/g) || [];
-        if (m.length > 0) ideUrl = m[m.length - 1];
-    }
-        res.json({ panelUrl, ideUrl });
-}
-
 let batteryLock = false;
 async function handleBattery(req, res) {
     if (batteryLock) return res.status(429).json({ error: 'busy' });
@@ -81,7 +63,6 @@ async function handleBattery(req, res) {
 }
 
 router.get('/stats', handleStats);
-router.get('/tunnel/links', handleTunnelLinks);
-    router.get('/battery', handleBattery);
+router.get('/battery', handleBattery);
 
 module.exports = router;
