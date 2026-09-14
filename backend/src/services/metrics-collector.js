@@ -16,12 +16,14 @@ function startCollector() {
   collectRam();
   collectBattery();
   collectStorage();
+  checkPowerStatus();
 
   intervals.push(setInterval(collectRam, 60_000));
+  intervals.push(setInterval(checkPowerStatus, 15_000));
   intervals.push(setInterval(collectBattery, 300_000));
   intervals.push(setInterval(collectStorage, 600_000));
 
-  console.log('[metrics] Collector started (RAM:60s, Battery:5m, Storage:10m)');
+  console.log('[metrics] Collector started (RAM:60s, Power:15s, Battery:5m, Storage:10m)');
 }
 
 function stopCollector() {
@@ -70,6 +72,49 @@ function collectRam() {
 
 let lastPluggedState = null;
 let lastHighTempAlertTime = 0;
+
+async function checkPowerStatus() {
+  try {
+    const { stdout, exitCode } = await execCommand('termux-battery-status', { timeout: 4000 });
+    if (exitCode !== 0 || !stdout) return;
+
+    const b = JSON.parse(stdout);
+    if (!b || (b.percentage === undefined && b.level === undefined)) return;
+    const percentage = b.percentage !== undefined ? b.percentage : b.level;
+    const currentPlugged = b.plugged || 'UNPLUGGED';
+
+    if (lastPluggedState === null) {
+      lastPluggedState = currentPlugged;
+      return;
+    }
+
+    const wasUnplugged = lastPluggedState === 'UNPLUGGED';
+    const isNowUnplugged = currentPlugged === 'UNPLUGGED';
+
+    if (!wasUnplugged && isNowUnplugged) {
+      lastPluggedState = currentPlugged;
+      try {
+        const { sendSecurityAlert } = require('./telegram.service');
+        await sendSecurityAlert('power_disconnected', { percentage, status: b.status });
+      } catch (e) {}
+    } else if (wasUnplugged && !isNowUnplugged) {
+      lastPluggedState = currentPlugged;
+      try {
+        const { sendSecurityAlert } = require('./telegram.service');
+        await sendSecurityAlert('power_connected', { percentage, plugged: currentPlugged });
+      } catch (e) {}
+    }
+
+    // Check for overheat (> 44°C) with 10 min cooldown
+    if (b.temperature && b.temperature >= 44 && (Date.now() - lastHighTempAlertTime > 600000)) {
+      lastHighTempAlertTime = Date.now();
+      try {
+        const { sendSecurityAlert } = require('./telegram.service');
+        await sendSecurityAlert('battery_temp_high', { temperature: b.temperature, percentage });
+      } catch (e) {}
+    }
+  } catch (err) {}
+}
 
 async function collectBattery() {
   try {

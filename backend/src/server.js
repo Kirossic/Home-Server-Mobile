@@ -1,3 +1,6 @@
+const dns = require('dns');
+try { dns.setDefaultResultOrder('ipv4first'); } catch (e) {}
+
 const express = require('express');
 const path = require('path');
 const os = require('os');
@@ -106,6 +109,10 @@ app.use('/api', (req, res, next) => {
   if (token !== PANEL_PASSWORD) {
     const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || req.ip;
     logEvent('auth_unauthorized', { ip, path: req.path }, 'warn', 'security');
+    try {
+      const { sendSecurityAlert } = require('./services/telegram.service');
+      sendSecurityAlert('auth_failed', { ip, path: req.path });
+    } catch (e) {}
     return res.status(401).send('Unauthorized');
   }
   next();

@@ -1,3 +1,8 @@
+const dns = require('dns');
+try {
+    dns.setDefaultResultOrder('ipv4first');
+} catch (e) {}
+
 const { getSettings } = require('./settings.service');
 const { logEvent } = require('./events.service');
 
@@ -30,6 +35,9 @@ function getMainMenuKeyboard() {
             [
                 { text: '🧹 Сжать БД', callback_data: 'cmd_vacuum' },
                 { text: '🔄 Туннели', callback_data: 'cmd_restart_tunnels' }
+            ],
+            [
+                { text: '🚨 Проверить алерты (Тест)', callback_data: 'cmd_test_alert' }
             ]
         ]
     };
@@ -57,18 +65,31 @@ async function sendTelegramMessage(text, options = {}) {
     }
 
     const url = `https://api.telegram.org/bot${token}/sendMessage`;
-    const res = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-        signal: AbortSignal.timeout(10000),
-    });
 
-    const data = await res.json();
-    if (!data.ok) {
-        throw new Error(data.description || 'Ошибка отправки в Telegram API');
+    let lastError = null;
+    for (let attempt = 1; attempt <= 2; attempt++) {
+        try {
+            const res = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body),
+                signal: AbortSignal.timeout(20000),
+            });
+
+            const data = await res.json();
+            if (!data.ok) {
+                throw new Error(data.description || 'Ошибка отправки в Telegram API');
+            }
+            return data.result;
+        } catch (err) {
+            lastError = err;
+            if (attempt === 1) {
+                await new Promise(r => setTimeout(r, 1000));
+            }
+        }
     }
-    return data.result;
+
+    throw lastError;
 }
 
 async function answerCallbackQuery(callbackQueryId, text = '', showAlert = false) {
@@ -103,6 +124,7 @@ async function registerBotCommands(token) {
             { command: 'logs', description: '📋 Последние события и ошибки' },
             { command: 'vacuum', description: '🧹 Сжать базу данных SQLite' },
             { command: 'restart_tunnels', description: '🔄 Перезапустить туннели' },
+            { command: 'test_alert', description: '🚨 Проверить систему оповещений' },
             { command: 'help', description: 'ℹ️ Справка по всем функциям' }
         ];
 
@@ -205,6 +227,17 @@ async function sendSecurityAlert(type, payload = {}) {
             `🕒 <i>${ts}</i>`,
             '',
             '✅ <i>Телефон снова заряжается от внешнего источника питания.</i>'
+        ].join('\n');
+    } else if (type === 'test') {
+        text = [
+            '🔔 <b>ТЕСТ СИСТЕМЫ ОПОВЕЩЕНИЙ</b>',
+            '',
+            '✅ Система алертов Telegram работает штатно!',
+            '• Уведомления о питании (подключение / отключение): <b>Активны</b>',
+            '• Контроль температуры аккумулятора (>44°C): <b>Активен</b>',
+            '• Контроль сбоев сервера и неверного входа: <b>Активен</b>',
+            '',
+            `🕒 <i>${ts}</i>`
         ].join('\n');
     } else if (type === 'server_error') {
         text = [
@@ -576,6 +609,11 @@ async function executeBotAction(action, { chatId, arg = '' }) {
             }
         }
         await sendTelegramMessage('⚠️ Туннели перезапущены, но ссылки еще инициализируются. Отправьте /tunnels через несколько секунд.', { chatId, replyMarkup: getMainMenuKeyboard() });
+        return;
+    }
+
+    if (action === '/test_alert' || action === 'cmd_test_alert') {
+        await sendSecurityAlert('test');
         return;
     }
 
