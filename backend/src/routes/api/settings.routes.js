@@ -15,8 +15,8 @@ router.get('/telegram', (req, res) => {
 
 router.post('/telegram', (req, res) => {
     try {
-        const { enabled, botToken, chatId, notifyOnTunnelRestart } = req.body;
-        const updated = saveTelegramSettings({ enabled, botToken, chatId, notifyOnTunnelRestart });
+        const { enabled, botToken, chatId, notifyOnTunnelRestart, notifyOnAuthFailure, notifyOnBatteryAlert, notifyOnServerError } = req.body;
+        const updated = saveTelegramSettings({ enabled, botToken, chatId, notifyOnTunnelRestart, notifyOnAuthFailure, notifyOnBatteryAlert, notifyOnServerError });
         restartPolling();
         logEvent('settings_telegram_update', { enabled: updated.enabled, notify: updated.notifyOnTunnelRestart }, 'info', 'actions');
         res.json({ success: true, settings: updated });

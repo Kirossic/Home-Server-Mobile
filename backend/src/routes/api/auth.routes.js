@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { PANEL_PASSWORD } = require('../../config/constants');
 const { logEvent } = require('../../services/events.service');
+const { sendSecurityAlert } = require('../../services/telegram.service');
 
 function handleLogin(req, res) {
     const { password } = req.body;
@@ -11,6 +12,9 @@ function handleLogin(req, res) {
         res.json({ success: true });
     } else {
         logEvent('auth_login_failed', { ip }, 'warn', 'security');
+        try {
+            sendSecurityAlert('auth_failed', { ip });
+        } catch (e) {}
         res.status(401).json({ error: 'Invalid password' });
     }
 }

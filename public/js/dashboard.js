@@ -339,6 +339,9 @@ async function openTelegramModal() {
             document.getElementById('tgBotToken').value = data.botTokenMasked || '';
             document.getElementById('tgChatId').value = data.chatId || '';
             document.getElementById('tgNotifyOnRestart').checked = data.notifyOnTunnelRestart !== false;
+            document.getElementById('tgNotifyOnAuthFailure').checked = data.notifyOnAuthFailure !== false;
+            document.getElementById('tgNotifyOnBatteryAlert').checked = data.notifyOnBatteryAlert !== false;
+            document.getElementById('tgNotifyOnServerError').checked = data.notifyOnServerError !== false;
             
             if (data.configured) {
                 showTgStatus('✅ Бот настроен и готов к отправке уведомлений.', '#4CAF50');
@@ -375,6 +378,9 @@ async function saveTelegramSettings() {
     const botToken = document.getElementById('tgBotToken').value.trim();
     const chatId = document.getElementById('tgChatId').value.trim();
     const notifyOnTunnelRestart = document.getElementById('tgNotifyOnRestart').checked;
+    const notifyOnAuthFailure = document.getElementById('tgNotifyOnAuthFailure').checked;
+    const notifyOnBatteryAlert = document.getElementById('tgNotifyOnBatteryAlert').checked;
+    const notifyOnServerError = document.getElementById('tgNotifyOnServerError').checked;
 
     if (btn) btn.disabled = true;
     showTgStatus('⏳ Сохранение...', '#ffb300');
@@ -383,7 +389,14 @@ async function saveTelegramSettings() {
         const res = await authFetch('/api/settings/telegram', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ botToken, chatId, notifyOnTunnelRestart })
+            body: JSON.stringify({
+                botToken,
+                chatId,
+                notifyOnTunnelRestart,
+                notifyOnAuthFailure,
+                notifyOnBatteryAlert,
+                notifyOnServerError
+            })
         });
         const data = await res.json();
         if (data && data.success) {

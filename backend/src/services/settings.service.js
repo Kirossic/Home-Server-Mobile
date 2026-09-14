@@ -9,6 +9,9 @@ const DEFAULT_SETTINGS = {
         botToken: '',
         chatId: '',
         notifyOnTunnelRestart: true,
+        notifyOnAuthFailure: true,
+        notifyOnBatteryAlert: true,
+        notifyOnServerError: true,
     }
 };
 
@@ -58,10 +61,13 @@ function getPublicTelegramSettings() {
         botTokenMasked: maskToken(tg.botToken),
         chatId: tg.chatId || '',
         notifyOnTunnelRestart: tg.notifyOnTunnelRestart !== false,
+        notifyOnAuthFailure: tg.notifyOnAuthFailure !== false,
+        notifyOnBatteryAlert: tg.notifyOnBatteryAlert !== false,
+        notifyOnServerError: tg.notifyOnServerError !== false,
     };
 }
 
-function saveTelegramSettings({ enabled, botToken, chatId, notifyOnTunnelRestart }) {
+function saveTelegramSettings({ enabled, botToken, chatId, notifyOnTunnelRestart, notifyOnAuthFailure, notifyOnBatteryAlert, notifyOnServerError }) {
     const dataDir = path.dirname(SETTINGS_FILE);
     if (!fs.existsSync(dataDir)) {
         fs.mkdirSync(dataDir, { recursive: true });
@@ -83,6 +89,15 @@ function saveTelegramSettings({ enabled, botToken, chatId, notifyOnTunnelRestart
 
     if (notifyOnTunnelRestart !== undefined) {
         settings.telegram.notifyOnTunnelRestart = !!notifyOnTunnelRestart;
+    }
+    if (notifyOnAuthFailure !== undefined) {
+        settings.telegram.notifyOnAuthFailure = !!notifyOnAuthFailure;
+    }
+    if (notifyOnBatteryAlert !== undefined) {
+        settings.telegram.notifyOnBatteryAlert = !!notifyOnBatteryAlert;
+    }
+    if (notifyOnServerError !== undefined) {
+        settings.telegram.notifyOnServerError = !!notifyOnServerError;
     }
 
     if (enabled !== undefined) {

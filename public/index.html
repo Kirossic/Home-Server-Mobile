@@ -336,9 +336,21 @@
                 <input type="text" id="tgChatId" placeholder="Например: 123456789" style="width:100%">
             </div>
 
-            <div style="margin-bottom:16px;display:flex;align-items:center;gap:8px">
+            <div style="margin-bottom:8px;display:flex;align-items:center;gap:8px">
                 <input type="checkbox" id="tgNotifyOnRestart" checked style="width:auto">
                 <label for="tgNotifyOnRestart" style="font-size:13px;cursor:pointer">Уведомлять о смене ссылок туннелей</label>
+            </div>
+            <div style="margin-bottom:8px;display:flex;align-items:center;gap:8px">
+                <input type="checkbox" id="tgNotifyOnAuthFailure" checked style="width:auto">
+                <label for="tgNotifyOnAuthFailure" style="font-size:13px;cursor:pointer">Уведомлять о попытках неверного входа</label>
+            </div>
+            <div style="margin-bottom:8px;display:flex;align-items:center;gap:8px">
+                <input type="checkbox" id="tgNotifyOnBatteryAlert" checked style="width:auto">
+                <label for="tgNotifyOnBatteryAlert" style="font-size:13px;cursor:pointer">Уведомлять об отключении питания и перегреве (>44°C)</label>
+            </div>
+            <div style="margin-bottom:14px;display:flex;align-items:center;gap:8px">
+                <input type="checkbox" id="tgNotifyOnServerError" checked style="width:auto">
+                <label for="tgNotifyOnServerError" style="font-size:13px;cursor:pointer">Уведомлять о сбоях сервера (Uncaught Exception)</label>
             </div>
 
             <div id="tgStatusMsg" style="font-size:13px;margin-bottom:12px;display:none"></div>

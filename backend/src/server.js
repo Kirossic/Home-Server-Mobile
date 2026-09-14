@@ -62,6 +62,8 @@ process.on('uncaughtException', (err) => {
   console.error('[server] Uncaught exception:', err.message, err.stack);
   try {
     logEvent('uncaught_exception', { error: err.message, stack: err.stack }, 'error', 'system');
+    const { sendSecurityAlert } = require('./services/telegram.service');
+    sendSecurityAlert('server_error', { name: 'Uncaught Exception', message: err.message });
   } catch (e) {}
 });
 
@@ -69,6 +71,8 @@ process.on('unhandledRejection', (reason) => {
   console.error('[server] Unhandled rejection:', reason);
   try {
     logEvent('unhandled_rejection', { reason: String(reason) }, 'error', 'system');
+    const { sendSecurityAlert } = require('./services/telegram.service');
+    sendSecurityAlert('server_error', { name: 'Unhandled Rejection', message: String(reason) });
   } catch (e) {}
 });
 
