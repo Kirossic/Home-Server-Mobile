@@ -102,10 +102,10 @@ async function loadBattery(statsData = null) {
                 fillEl.className = 'progress-fill' + (pct <= 20 ? ' danger' : (pct <= 40 ? ' warn' : ''));
             }
 
-            const headerBatText = `${icon} ${pct}%`;
+            const headerBatText = pct + '%';
             const ip = statsData ? statsData.ip : deviceIP;
             const uptime = statsData ? statsData.uptime : undefined;
-            updateHeaderPills(ip, uptime, headerBatText);
+            updateHeaderPills(ip, uptime, headerBatText, icon);
         }
     } catch(e) {
         const lvlEl = document.getElementById('batteryLevel');
@@ -471,12 +471,13 @@ async function loadProjectsForIDE() {
         dirs.forEach(p => {
             const card = document.createElement('div');
             card.className = 'link-card';
+            const displayPath = p.fullPath.replace('/data/data/com.termux/files/home', '~');
             card.innerHTML = `
                 <div class="link-card-header">
                     <span class="link-icon">📁</span>
-                    <div>
-                        <h3>${escapeHtml(p.name)}</h3>
-                        <span style="font-size:11px;color:var(--text-muted);font-family:monospace">${escapeHtml(p.fullPath)}</span>
+                    <div style="min-width:0;flex:1">
+                        <h3 style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(p.name)}</h3>
+                        <span class="ide-path" title="${escapeHtml(p.fullPath)}">${escapeHtml(displayPath)}</span>
                     </div>
                 </div>
                 <p>Открыть рабочую область проекта в редакторе code-server</p>

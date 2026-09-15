@@ -226,7 +226,7 @@ function updateHeaderOnlineStatus(isOnline) {
     }
 }
 
-function updateHeaderPills(ip, uptimeMin, batteryText) {
+function updateHeaderPills(ip, uptimeMin, batteryText, batteryIcon) {
     if (ip) {
         const ipEl = document.getElementById('headerIp');
         if (ipEl) ipEl.textContent = ip;
@@ -242,6 +242,10 @@ function updateHeaderPills(ip, uptimeMin, batteryText) {
     if (batteryText) {
         const batEl = document.getElementById('headerBat');
         if (batEl) batEl.textContent = batteryText;
+    }
+    if (batteryIcon) {
+        const batIconEl = document.getElementById('headerBatIcon');
+        if (batIconEl) batIconEl.textContent = batteryIcon;
     }
 }
 
