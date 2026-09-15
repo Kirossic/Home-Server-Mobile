@@ -2,49 +2,131 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>Redmi A3 Control Panel</title>
-    <!-- Подключаем внешние стили -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#121214">
+    <title>Redmi Server Panel</title>
+    <link rel="manifest" href="/manifest.json">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%231c1c20'/><text y='.85em' x='10' font-size='75'>📱</text></svg>">
     <link rel="stylesheet" href="/style.css">
 </head>
 <body>
     <div class="container">
-        <div class="tabs">
-            <button class="tab-btn active" onclick="switchTab('dashboard')">Панель управления</button>
-            <button class="tab-btn" onclick="switchTab('links')">Ссылки на сервисы</button>
-            <button class="tab-btn" onclick="switchTab('ide')">Быстрый запуск IDE</button>
-            <button class="tab-btn" onclick="switchTab('autostart')">⚙ Настройка Автозапуска</button>
-            <button class="tab-btn" onclick="switchTab('terminal')">💻 Терминал</button>
-            <button class="tab-btn" onclick="switchTab('logs')">📋 Логи</button>
-            <button class="tab-btn" onclick="switchTab('processes')">⚙ Процессы</button>
-			<button class="tab-btn" onclick="switchTab('services')">🔌 Службы</button>
-			<button class="tab-btn" onclick="switchTab('metrics')">📊 Метрики</button>
-        </div>
+        <!-- Верхняя панель (Header Bar) -->
+        <header class="app-header">
+            <div class="header-brand">
+                <span class="header-logo">📱</span>
+                <div class="header-title-group">
+                    <div class="header-title">
+                        Redmi Server
+                        <span class="status-badge" id="headerStatusBadge">
+                            <span class="status-dot"></span>
+                            <span id="headerStatusText">Онлайн</span>
+                        </span>
+                    </div>
+                </div>
+            </div>
 
-        <!-- Вкладка 1: Панель Управления -->
-        <div id="dashboard" class="tab-content active">
+            <div class="header-info-pills">
+                <span class="info-pill" title="Локальный IP адрес">🌐 <strong id="headerIp">127.0.0.1</strong></span>
+                <span class="info-pill" title="Время непрерывной работы">⏱ <strong id="headerUptime">0 м</strong></span>
+                <span class="info-pill" id="headerBatPill" title="Батарея устройства">🔋 <strong id="headerBat">-</strong></span>
+            </div>
+
+            <div class="header-actions">
+                <button class="header-btn" onclick="openTelegramModal()" title="Настройка Telegram-бота">✈️ Telegram</button>
+                <button class="header-btn btn-restart" onclick="triggerSystemRestart()" title="Перезапустить службы сервера">🔄 Перезапуск</button>
+                <button class="header-btn btn-logout" onclick="logout()" title="Выйти из сессии">🔒 Выход</button>
+            </div>
+        </header>
+
+        <!-- Навигация по вкладкам -->
+        <nav class="tabs" id="tabsNav">
+            <button class="tab-btn active" data-tab="dashboard" onclick="switchTab('dashboard', this)">📊 Панель</button>
+            <button class="tab-btn" data-tab="links" onclick="switchTab('links', this)">🔗 Сервисы</button>
+            <button class="tab-btn" data-tab="ide" onclick="switchTab('ide', this)">🚀 IDE</button>
+            <button class="tab-btn" data-tab="services" onclick="switchTab('services', this)">⚡ Службы</button>
+            <button class="tab-btn" data-tab="terminal" onclick="switchTab('terminal', this)">💻 Терминал</button>
+            <button class="tab-btn" data-tab="logs" onclick="switchTab('logs', this)">📋 Логи</button>
+            <button class="tab-btn" data-tab="processes" onclick="switchTab('processes', this)">⚙ Процессы</button>
+            <button class="tab-btn" data-tab="metrics" onclick="switchTab('metrics', this)">📈 Метрики</button>
+            <button class="tab-btn" data-tab="autostart" onclick="switchTab('autostart', this)">🔧 Автозапуск</button>
+        </nav>
+
+        <!-- Вкладка 1: Панель Управления (Dashboard) -->
+        <main id="dashboard" class="tab-content active">
             <div class="layout">
                 <div class="card">
-                    <h2>Характеристики</h2>
-                    <div class="metric" onclick="showMetric('os')" style="cursor:pointer">
-                        <h3>ОС / Окружение</h3><div class="value" id="os">-</div>
+                    <h2>
+                        <span>📊 Характеристики</span>
+                    </h2>
+
+                    <!-- Карточки ключевых метрик -->
+                    <div class="stats-grid">
+                        <div class="stat-card" onclick="showMetric('ram')" title="Нажмите для подробностей и графика">
+                            <div class="stat-header">
+                                <span class="stat-label">RAM</span>
+                                <span class="stat-icon">🧠</span>
+                            </div>
+                            <div class="stat-value"><span id="ramUsed">0</span> <small style="font-size:12px">/ <span id="ramTotal">0</span> ГБ</small></div>
+                            <div class="progress-bar">
+                                <div class="progress-fill" id="ramProgressFill" style="width: 0%"></div>
+                            </div>
+                            <div class="stat-sub" style="margin-top:4px">Свободно: <span id="ramFree">0</span> ГБ</div>
+                        </div>
+
+                        <div class="stat-card" onclick="showMetric('disk')" title="Нажмите для подробностей">
+                            <div class="stat-header">
+                                <span class="stat-label">Накопитель</span>
+                                <span class="stat-icon">💾</span>
+                            </div>
+                            <div class="stat-value" style="font-size:15px"><span id="diskUsed">-</span> <small style="font-size:11px">/ <span id="diskTotal">-</span></small></div>
+                            <div class="progress-bar">
+                                <div class="progress-fill disk-fill" id="diskProgressFill" style="width: 0%"></div>
+                            </div>
+                            <div class="stat-sub" style="margin-top:4px">Диск Termux</div>
+                        </div>
+
+                        <div class="stat-card" onclick="showMetric('battery')" title="Нажмите для подробностей батареи">
+                            <div class="stat-header">
+                                <span class="stat-label">Батарея</span>
+                                <span class="stat-icon" id="batteryIcon">🔋</span>
+                            </div>
+                            <div class="stat-value"><span id="batteryLevel">-</span></div>
+                            <div class="progress-bar">
+                                <div class="progress-fill" id="batteryProgressFill" style="width: 0%"></div>
+                            </div>
+                            <div class="stat-sub" id="batteryStatus" style="margin-top:4px">-</div>
+                        </div>
+
+                        <div class="stat-card" onclick="showMetric('uptime')" title="Нагрузка процессора и аптайм">
+                            <div class="stat-header">
+                                <span class="stat-label">Нагрузка</span>
+                                <span class="stat-icon">⚡</span>
+                            </div>
+                            <div class="stat-value" style="font-size:15px" id="cpuLoad">-</div>
+                            <div class="stat-sub" style="margin-top:auto">Аптайм: <span id="uptime">0</span> мин</div>
+                        </div>
                     </div>
-                    <div class="metric" onclick="showMetric('ram')" style="cursor:pointer">
-                        <h3>Оперативная память</h3><div class="value"><span id="ramUsed">0</span> / <span id="ramTotal">0</span> ГБ  <span id="ramFree" style="display:none">0</span></div>
+
+                    <!-- Дополнительные параметры -->
+                    <div class="stat-card" onclick="showMetric('os')" style="margin-bottom:10px" title="Информация об ОС">
+                        <div class="stat-header">
+                            <span class="stat-label">ОС / Платформа</span>
+                            <span class="stat-icon">📱</span>
+                        </div>
+                        <div style="font-size:13px;font-weight:600;color:#fff" id="os">-</div>
                     </div>
-                    <div class="metric" onclick="showMetric('disk')" style="cursor:pointer">
-                        <h3>Накопитель (Использовано / Всего)</h3><div class="value"><span id="diskUsed">-</span> / <span id="diskTotal">-</span></div>
+
+                    <div class="stat-card" onclick="showMetric('net')" style="margin-bottom:14px" title="Сетевые адаптеры">
+                        <div class="stat-header">
+                            <span class="stat-label">Wi-Fi / Локальный IP</span>
+                            <span class="stat-icon">🌐</span>
+                        </div>
+                        <div style="font-size:14px;font-weight:700;font-family:monospace;color:var(--accent)" id="ip">-</div>
                     </div>
-                    <div class="metric" onclick="showMetric('net')" style="cursor:pointer">
-                        <h3>Локальный IP</h3><div class="value" id="ip">-</div>
-                    </div>
-                    <div class="metric" onclick="showMetric('uptime')" style="cursor:pointer">
-                        <h3>Аптайм сервера</h3><div class="value"><span id="uptime">0</span> мин.</div>
-                    </div>
-                    <div class="metric" onclick="showMetric('battery')" style="cursor:pointer">
-                        <h3>Батарея</h3><div class="value"><span id="batteryLevel">-</span> <span id="batteryStatus"></span></div>
-                    </div>
+
                     <div class="settings-block">
-                        <label for="refreshInterval">Частота обновления данных:</label>
+                        <label for="refreshInterval">Частота обновления:</label>
                         <select id="refreshInterval" onchange="changeRefreshInterval(this.value)">
                             <option value="1000">1 секунда</option>
                             <option value="3000" selected>3 секунды</option>
@@ -54,73 +136,106 @@
                         </select>
                     </div>
 
-                    <div class="section" style="background: #222; padding: 15px; border-radius: 8px; margin-bottom: 20px; color: #fff;">
-                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 12px;">
-                            <h3 style="margin:0;">🌐 Внешний доступ (Cloudflare Tunnels)</h3>
-                            <button id="tg-modal-btn" onclick="openTelegramModal()" class="btn" style="background: #2196F3; color: #fff; padding: 4px 10px; font-size: 12px; border-radius: 4px; margin:0; cursor:pointer;" title="Настройка Telegram-оповещений">✈️ Telegram</button>
-                        </div>
-                        
-                        <div style="margin-bottom: 15px;">
-                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 5px;">
-                                <p style="margin:0;"><strong>Адрес этой Панели:</strong></p>
-                                <span id="tunnel-panel-status" style="font-size:12px; font-weight:bold; color:#aaa;">Проверка...</span>
-                            </div>
-                            <a id="tunnel-panel-link" href="#" target="_blank" class="btn" style="display: inline-block; background: #4CAF50; color: #fff; padding: 8px 12px; border-radius: 4px; text-decoration: none; font-weight: bold; text-align: center; width: 100%;">Обновление ссылки...</a>
+                    <!-- Блок Cloudflare Tunnels -->
+                    <div class="tunnel-box">
+                        <div class="tunnel-header">
+                            <div class="tunnel-title">🌐 Cloudflare Tunnels</div>
+                            <button onclick="openTelegramModal()" class="btn-sm btn-secondary" title="Telegram-уведомления">✈️ Бот</button>
                         </div>
 
-                        <div>
-                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 5px;">
-                                <p style="margin:0;"><strong>Адрес среды разработки IDE:</strong></p>
-                                <span id="tunnel-ide-status" style="font-size:12px; font-weight:bold; color:#aaa;">Проверка...</span>
+                        <div class="tunnel-item">
+                            <div class="tunnel-item-top">
+                                <strong>Панель Управления:</strong>
+                                <span id="tunnel-panel-status">Проверка...</span>
                             </div>
-                            <a id="tunnel-ide-link" href="#" target="_blank" class="btn" style="display: inline-block; background: #00bcd4; color: #fff; padding: 8px 12px; border-radius: 4px; text-decoration: none; font-weight: bold; text-align: center; width: 100%;">🚀 Открыть IDE с кодом</a>
+                            <div class="tunnel-action-row">
+                                <a id="tunnel-panel-link" href="#" target="_blank" class="btn-tunnel-open">Обновление...</a>
+                                <button class="btn-copy-link" onclick="copyTunnelUrl('tunnel-panel-link')" title="Скопировать ссылку в буфер">📋</button>
+                            </div>
                         </div>
 
-                        <button id="tunnel-restart-btn" onclick="restartTunnels()" class="btn" style="display:block; background: #ff9800; color: #fff; padding: 8px 12px; border-radius: 4px; font-weight: bold; width: 100%; margin-top: 14px; cursor: pointer; border: none;">🔄 Перезапустить туннели</button>
+                        <div class="tunnel-item">
+                            <div class="tunnel-item-top">
+                                <strong>IDE (Код):</strong>
+                                <span id="tunnel-ide-status">Проверка...</span>
+                            </div>
+                            <div class="tunnel-action-row">
+                                <a id="tunnel-ide-link" href="#" target="_blank" class="btn-tunnel-open" style="background:#00bcd4">🚀 Открыть IDE</a>
+                                <button class="btn-copy-link" onclick="copyTunnelUrl('tunnel-ide-link')" title="Скопировать ссылку в буфер">📋</button>
+                            </div>
+                        </div>
+
+                        <button id="tunnel-restart-btn" onclick="restartTunnels()" class="btn-secondary" style="width:100%;margin-top:8px">🔄 Перезапустить туннели</button>
                     </div>
-
-                    <button class="btn-danger" onclick="triggerSystemRestart()">Перезапустить всё</button>
                 </div>
+
+                <!-- Файловый менеджер и редактор -->
                 <div class="fm-container">
                     <div class="file-list">
-                        <h3>Проводник</h3>
+                        <h3 style="margin-bottom:10px;font-size:15px;color:#fff;display:flex;align-items:center;justify-content:space-between">
+                            <span>📁 Проводник файлов</span>
+                            <span id="fileCountBadge" style="font-size:11px;color:var(--text-secondary);font-weight:normal"></span>
+                        </h3>
+
+                        <!-- Хлебные крошки (Breadcrumbs) -->
+                        <div class="breadcrumbs-bar" id="breadcrumbsBar">
+                            <span class="crumb" onclick="loadFiles('/')">/</span>
+                        </div>
+
                         <div class="nav-controls">
                             <div class="nav-btn" onclick="goBack()">⬅ Назад</div>
-                            <div class="nav-btn" onclick="loadFiles('/')">📂 В корень (/)</div>
-                            <div class="nav-btn" onclick="loadFiles('')">🏠 В домашнюю (~)</div>
+                            <div class="nav-btn" onclick="loadFiles('')">🏠 Домашняя (~)</div>
                             <div class="nav-btn" onclick="document.getElementById('fileInput').click()">⬆ Загрузить</div>
                             <div class="nav-btn" onclick="createFolder()">➕ Папку</div>
                             <div class="nav-btn" onclick="createFile()">📄 Файл</div>
                             <input type="file" id="fileInput" onchange="uploadFile()" style="display:none">
                         </div>
-                        <div class="search-bar"><input type="text" id="searchQuery" placeholder="🔍 Поиск файлов..." onkeydown="if(event.key==='Enter')searchFiles()"></div>
-                        <div class="path-bar" id="pathBar">/</div>
+
+                        <div class="search-bar">
+                            <input type="text" id="searchQuery" placeholder="🔍 Поиск файлов..." onkeydown="if(event.key==='Enter')searchFiles()">
+                        </div>
+
                         <div id="filesContainer"></div>
                     </div>
-                    <div class="editor-zone">
-                        <h4 id="editorTitle">Выберите файл для редактирования</h4>
-                        <textarea id="editor" disabled></textarea>
-                        <button id="saveBtn" onclick="saveCurrentFile()" style="display:none;">Сохранить изменения</button>
+
+                    <div class="editor-zone" id="editorZone">
+                        <div class="editor-header">
+                            <h4 id="editorTitle">
+                                <span>Выберите файл для редактирования</span>
+                                <span id="unsavedDot" class="unsaved-dot" style="display:none" title="Несохраненные изменения"></span>
+                            </h4>
+                            <div class="editor-actions">
+                                <button id="editorFullscreenBtn" class="btn-sm btn-secondary" onclick="toggleEditorFullscreen()" style="display:none" title="Во весь экран">⛶</button>
+                                <button id="saveBtn" onclick="saveCurrentFile()" class="btn-sm" style="display:none;" title="Сохранить (Ctrl+S)">💾 Сохранить</button>
+                            </div>
+                        </div>
+                        <textarea id="editor" disabled placeholder="Выберите текстовый файл слева для просмотра и редактирования..."></textarea>
                     </div>
-                    <div id="metricPanel" class="editor-zone" style="display:none">
-                        <div id="metricPanelHeader" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
-                            <h4 id="metricPanelTitle">Информация</h4>
-                            <button onclick="closeMetric()" style="margin:0;background:var(--bg-hover);color:#fff">✕ Закрыть</button>
+
+                    <!-- Панель подробностей метрик -->
+                    <div id="metricPanel" style="display:none">
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+                            <h4 id="metricPanelTitle" style="font-size:15px;color:#fff;margin:0">Информация</h4>
+                            <button onclick="closeMetric()" class="btn-sm btn-secondary" style="margin:0">✕ Закрыть</button>
                         </div>
                         <div id="metricPanelBody"></div>
-                        <canvas id="ramChart" width="310" height="120" style="display:none;background:#121214;border:1px solid var(--border);border-radius:4px;margin-top:8px"></canvas>
+                        <div id="ramChartContainer" style="margin-top:14px;display:none">
+                            <div style="font-size:11px;color:var(--text-secondary);text-transform:uppercase;margin-bottom:6px;font-weight:600">График использования RAM (60 сек)</div>
+                            <canvas id="ramChart" style="background:#0d0d0f;border:1px solid var(--border);border-radius:6px;width:100%;height:130px"></canvas>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
+        </main>
 
         <!-- Вкладка 2: Горячие Ссылки -->
-        <div id="links" class="tab-content">
+        <section id="links" class="tab-content">
             <div class="links-header">
-                <h2>Мои сервисы</h2>
+                <h2>🔗 Мои сервисы и закладки</h2>
                 <button class="btn-add-link" onclick="showAddLinkForm()">+ Добавить ссылку</button>
             </div>
             <div id="linksContainer" class="links-grid"></div>
+
             <div id="linkFormOverlay" class="overlay" style="display:none" onclick="hideLinkForm()">
                 <div class="modal" onclick="event.stopPropagation()">
                     <h3 id="linkFormTitle">Добавить ссылку</h3>
@@ -135,31 +250,67 @@
                     </div>
                 </div>
             </div>
-        </div>
+        </section>
 
         <!-- Вкладка 3: Быстрый старт IDE -->
-        <div id="ide" class="tab-content">
-            <h2>Проекты в разработке</h2>
-            <p>Кликните по проекту, чтобы быстро открыть его рабочую область в новой вкладке IDE:</p>
-            <div class="links-grid" id="projectsIdeContainer"></div>
-        </div>
-
-        <!-- Вкладка 4: Редактор автозапуска -->
-        <div id="autostart" class="tab-content">
-            <div class="config-zone">
-                <h2>Редактирование скрипта автозапуска (~/.bashrc)</h2>
-                <p style="color: #a8a8b3; font-size: 13px;">Службы, прописанные здесь, автоматически поднимутся при старте Termux или при нажатии кнопки «Перезапустить всё».</p>
-                <textarea id="bashrcEditor" style="min-height: 480px;"></textarea>
-                <button onclick="saveBashrc()">Сохранить конфигурацию автозапуска</button>
-            </div>
-        </div>
-
-        <!-- Вкладка 5: Логи -->
-        <div id="logs" class="tab-content">
+        <section id="ide" class="tab-content">
             <div class="links-header">
-                <h2>📋 Просмотр логов</h2>
+                <h2>🚀 Проекты в разработке</h2>
+                <span style="font-size:13px;color:var(--text-secondary)">Кликните по проекту, чтобы открыть его в code-server:</span>
+            </div>
+            <div class="links-grid" id="projectsIdeContainer"></div>
+        </section>
+
+        <!-- Вкладка 4: Службы (Services) -->
+        <section id="services" class="tab-content">
+            <div class="links-header">
+                <div>
+                    <h2>⚡ Управление службами</h2>
+                    <p style="color:var(--text-secondary);font-size:13px;margin-top:4px">Запуск, остановка и перезапуск системных демонов.</p>
+                </div>
+                <button onclick="loadServices()" class="btn-secondary" style="margin:0">🔄 Обновить</button>
+            </div>
+            <div id="servicesContainer" class="links-grid"></div>
+        </section>
+
+        <!-- Вкладка 5: Web Terminal -->
+        <section id="terminal" class="tab-content">
+            <div class="links-header">
+                <h2>💻 Web Terminal</h2>
+                <span id="terminalCwdBadge" class="info-pill" style="font-family:monospace">~/</span>
+            </div>
+            <div class="terminal-container" id="terminalBox">
+                <div class="terminal-toolbar">
+                    <div class="terminal-cmds">
+                        <span class="cmd-chip" onclick="termExec('top -b -n 1')">top</span>
+                        <span class="cmd-chip" onclick="termExec('ps aux')">ps aux</span>
+                        <span class="cmd-chip" onclick="termExec('df -h')">df -h</span>
+                        <span class="cmd-chip" onclick="termExec('free -h')">free -h</span>
+                        <span class="cmd-chip" onclick="termExec('uname -a')">uname -a</span>
+                        <span class="cmd-chip" onclick="termExec('uptime')">uptime</span>
+                        <span class="cmd-chip" onclick="termExec('ls -la')">ls -la</span>
+                    </div>
+                    <div class="terminal-toolbar-actions">
+                        <button class="terminal-tool-btn" onclick="copyTerminalOutput()" title="Скопировать вывод">📋 Копировать</button>
+                        <button class="terminal-tool-btn" onclick="toggleTerminalFullscreen()" id="termFsBtn" title="Полноэкранный режим">⛶ Экран</button>
+                        <button class="terminal-tool-btn" onclick="termClear()" title="Очистить экран">✕ Очистить</button>
+                    </div>
+                </div>
+                <div class="terminal-input-row">
+                    <span class="terminal-prompt" id="termPrompt">~$</span>
+                    <input type="text" id="terminalInput" class="terminal-input" placeholder="Введите команду bash..." onkeydown="if(event.key==='Enter')termExec()" autofocus>
+                    <button class="terminal-go" onclick="termExec()">⏎</button>
+                </div>
+                <pre id="terminalOutput" class="terminal-output">Добро пожаловать в Web Terminal Redmi Server. Введите команду или выберите чип выше.</pre>
+            </div>
+        </section>
+
+        <!-- Вкладка 6: Логи (Logs) -->
+        <section id="logs" class="tab-content">
+            <div class="links-header">
+                <h2>📋 Просмотр системных логов</h2>
                 <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-                    <select id="logSelector" onchange="loadLogs()" style="background:var(--bg-primary);border:1px solid var(--border);color:#fff;padding:6px 10px;border-radius:4px">
+                    <select id="logSelector" onchange="loadLogs()" style="background:var(--bg-primary);border:1px solid var(--border);color:#fff;padding:7px 10px;border-radius:var(--radius-sm)">
                         <option value="main-server">main-server</option>
                         <option value="nodemon">nodemon</option>
                         <option value="code-server">code-server</option>
@@ -167,141 +318,173 @@
                         <option value="ide_tunnel">ide_tunnel</option>
                         <option value="tunnel_watchdog">tunnel_watchdog</option>
                     </select>
-                    <button onclick="loadLogs()" style="margin:0">🔄</button>
-                    <button onclick="document.getElementById('logOutput').textContent=''" style="margin:0;background:var(--bg-hover);color:#fff">✕ Очистить</button>
-                    <button id="logViewToggle" onclick="toggleLogView()" style="margin:0;background:var(--bg-hover);color:#fff">📋 Структура</button>
+                    <input type="text" id="logSearchInput" placeholder="🔍 Фильтр..." oninput="filterLogsInPlace()" style="background:var(--bg-primary);border:1px solid var(--border);color:#fff;padding:7px 10px;border-radius:var(--radius-sm);width:130px;font-size:12px">
+                    <button onclick="loadLogs()" class="btn-secondary" style="margin:0" title="Обновить">🔄</button>
+                    <button id="logViewToggle" onclick="toggleLogView()" class="btn-secondary" style="margin:0">📋 Структура</button>
+                    <button onclick="downloadCurrentLog()" class="btn-secondary" style="margin:0" title="Скачать лог">⬇ Скачать</button>
+                    <label style="display:inline-flex;align-items:center;gap:5px;font-size:12px;color:var(--text-secondary);cursor:pointer">
+                        <input type="checkbox" id="liveTailCheckbox" onchange="toggleLiveTail(this.checked)" style="width:auto">
+                        Live Tail
+                    </label>
                 </div>
             </div>
-            <pre id="logOutput" class="terminal-output" style="min-height:400px;max-height:600px">Выберите лог-файл и нажмите 🔄</pre>
-        </div>
+            <pre id="logOutput" class="terminal-output" style="min-height:420px;max-height:650px">Выберите лог-файл и нажмите 🔄</pre>
+        </section>
 
-        <div id="processes" class="tab-content">
+        <!-- Вкладка 7: Процессы (Processes) -->
+        <section id="processes" class="tab-content">
             <div class="links-header">
-                <h2>⚙ Процессы</h2>
-                <button onclick="loadProcesses()" style="margin:0">🔄 Обновить</button>
+                <h2>⚙ Диспетчер процессов</h2>
+                <div style="display:flex;gap:12px;align-items:center">
+                    <label style="display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--text-secondary);cursor:pointer">
+                        <input type="checkbox" id="procAutoRefresh" onchange="toggleProcAutoRefresh(this.checked)" style="width:auto">
+                        Автообновление (3с)
+                    </label>
+                    <button onclick="loadProcesses()" class="btn-secondary" style="margin:0">🔄 Обновить</button>
+                </div>
             </div>
             <div class="proc-stats" id="procStats"></div>
-            <div class="search-bar"><input type="text" id="procSearch" placeholder="🔍 Поиск по PID, имени, команде..." oninput="filterProcesses()"></div>
+            <div class="search-bar">
+                <input type="text" id="procSearch" placeholder="🔍 Быстрый поиск по PID, имени пользователя, команде..." oninput="filterProcesses()">
+            </div>
             <div class="process-table-wrap">
                 <table class="process-table">
                     <thead>
                         <tr>
-                            <th>PID</th>
-                            <th>Пользователь</th>
-                            <th>CPU%</th>
-                            <th>MEM%</th>
-                            <th>Команда</th>
-                            <th></th>
+                            <th class="sortable-th" onclick="sortProcesses('pid')">PID <span id="sort-pid" class="sort-arrow"></span></th>
+                            <th class="sortable-th" onclick="sortProcesses('user')">Пользователь <span id="sort-user" class="sort-arrow"></span></th>
+                            <th class="sortable-th" onclick="sortProcesses('cpu')">CPU% <span id="sort-cpu" class="sort-arrow"></span></th>
+                            <th class="sortable-th" onclick="sortProcesses('mem')">MEM% <span id="sort-mem" class="sort-arrow"></span></th>
+                            <th class="sortable-th" onclick="sortProcesses('cmd')">Команда <span id="sort-cmd" class="sort-arrow"></span></th>
+                            <th style="width:60px">Действие</th>
                         </tr>
                     </thead>
                     <tbody id="processTbody">
-                        <tr><td colspan="6" style="text-align:center;color:var(--text-secondary)">Загрузка...</td></tr>
+                        <tr><td colspan="6" style="text-align:center;color:var(--text-secondary);padding:20px">Загрузка списка процессов...</td></tr>
                     </tbody>
                 </table>
             </div>
-        </div>
+        </section>
 
-        <div id="terminal" class="tab-content">
-            <h2>💻 Web Terminal</h2>
-            <div class="terminal-container">
-                <div class="terminal-cmds">
-                    <span class="cmd-chip" onclick="termExec('top -b -n 1')">top</span>
-                    <span class="cmd-chip" onclick="termExec('ps aux')">ps aux</span>
-                    <span class="cmd-chip" onclick="termExec('df -h')">df -h</span>
-                    <span class="cmd-chip" onclick="termExec('free -h')">free -h</span>
-                    <span class="cmd-chip" onclick="termExec('uname -a')">uname -a</span>
-                    <span class="cmd-chip" onclick="termExec('uptime')">uptime</span>
-                    <span class="cmd-chip" onclick="termExec('whoami')">whoami</span>
-                    
-                    <span class="cmd-chip" onclick="termExec('ls -la')">ls -la</span>
-                    <span class="cmd-chip" onclick="termExec('pwd')">pwd</span>
+        <!-- Вкладка 8: Метрики и журнал аудита -->
+        <section id="metrics" class="tab-content">
+            <div class="links-header">
+                <h2>📈 Аналитика и метрики</h2>
+                <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+                    <select id="metricsType" onchange="loadMetrics()" style="background:var(--bg-primary);border:1px solid var(--border);color:#fff;padding:7px 10px;border-radius:var(--radius-sm)">
+                        <option value="ram">RAM</option>
+                        <option value="battery">Батарея</option>
+                        <option value="storage">Хранилище</option>
+                    </select>
+                    <select id="metricsLimit" onchange="loadMetrics()" style="background:var(--bg-primary);border:1px solid var(--border);color:#fff;padding:7px 10px;border-radius:var(--radius-sm)">
+                        <option value="50">50 записей</option>
+                        <option value="200" selected>200 записей</option>
+                        <option value="1000">1000 записей</option>
+                    </select>
+                    <button onclick="loadMetrics()" class="btn-secondary" style="margin:0">🔄</button>
                 </div>
-                <div class="terminal-input-row">
-                    <span class="terminal-prompt" id="termPrompt">~$</span>
-                    <input type="text" id="terminalInput" class="terminal-input" placeholder="Введите команду..." onkeydown="if(event.key==='Enter')termExec()" autofocus>
-                    <button class="terminal-go" onclick="termExec()">⏎</button>
-                    <button class="terminal-clear" onclick="termClear()">✕</button>
+            </div>
+            <div id="metricsContainer" class="process-table-wrap" style="margin-bottom:24px">
+                <table class="log-table">
+                    <thead id="metricsTableHead"></thead>
+                    <tbody id="metricsTableBody"></tbody>
+                </table>
+            </div>
+
+            <div class="links-header" style="flex-wrap:wrap;gap:10px">
+                <h3>📜 Журнал событий и безопасности</h3>
+                <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+                    <select id="eventsSource" onchange="loadEvents()" style="background:var(--bg-primary);border:1px solid var(--border);color:#fff;padding:6px 10px;border-radius:var(--radius-sm)">
+                        <option value="">Все источники</option>
+                        <option value="security">🛡 Безопасность</option>
+                        <option value="actions">💻 Действия</option>
+                        <option value="services">⚙ Службы</option>
+                        <option value="telegram">✈ Telegram</option>
+                        <option value="system">🖥 Система</option>
+                        <option value="http">🌐 HTTP</option>
+                    </select>
+                    <select id="eventsLevel" onchange="loadEvents()" style="background:var(--bg-primary);border:1px solid var(--border);color:#fff;padding:6px 10px;border-radius:var(--radius-sm)">
+                        <option value="">Все уровни</option>
+                        <option value="info">ℹ️ Info</option>
+                        <option value="warn">⚠️ Warn</option>
+                        <option value="error">❌ Error</option>
+                    </select>
+                    <input type="text" id="eventsQuery" placeholder="Поиск в событиях..." onkeydown="if(event.key==='Enter')loadEvents()" style="background:var(--bg-primary);border:1px solid var(--border);color:#fff;padding:6px 10px;border-radius:var(--radius-sm);width:150px">
+                    <button onclick="loadEvents()" class="btn-secondary" style="margin:0">🔄</button>
                 </div>
-                <pre id="terminalOutput" class="terminal-output">Добро пожаловать в Web Terminal. Нажмите ⏎ чтобы выполнить команду.</pre>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:12px;background:var(--bg-card);padding:10px 14px;border-radius:var(--radius-sm);border:1px solid var(--border)">
+                <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+                    <span>💾 <b>База данных:</b> <span id="dbSizeLabel" style="font-family:monospace;color:var(--accent)">-</span></span>
+                    <select id="archiveSelector" onchange="onArchiveSelectionChange()" style="background:var(--bg-primary);border:1px solid var(--border);color:#fff;padding:5px 8px;border-radius:var(--radius-sm)">
+                        <option value="">🔥 Активная база (текущий месяц)</option>
+                    </select>
+                </div>
+                <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+                    <span id="vacuumStatus" style="font-size:12px;color:var(--text-secondary)"></span>
+                    <button id="archiveDownloadBtn" onclick="downloadSelectedArchive()" class="btn-sm btn-secondary" style="display:none;margin:0">💾 Скачать</button>
+                    <button id="archiveRestoreBtn" onclick="restoreSelectedArchive()" class="btn-sm" style="display:none;margin:0;background:var(--warning);color:#000">♻️ Восстановить</button>
+                    <button onclick="triggerArchiveCreation()" class="btn-sm btn-secondary" style="margin:0" title="Упаковать прошлый месяц в архив">📦 В архив</button>
+                    <button onclick="triggerMaintenance()" class="btn-sm" style="margin:0">🧹 VACUUM</button>
+                </div>
+            </div>
+            <div id="eventsContainer" class="process-table-wrap">
+                <table class="log-table">
+                    <thead><tr><th>Время</th><th>Источник</th><th>Тип</th><th>Детали</th><th>Уровень</th></tr></thead>
+                    <tbody id="eventsTableBody"></tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- Вкладка 9: Редактор автозапуска -->
+        <section id="autostart" class="tab-content">
+            <div class="config-zone">
+                <h2>🔧 Редактирование автозапуска (~/.bashrc)</h2>
+                <p style="color:var(--text-secondary);font-size:13px;margin:6px 0 14px 0">Службы, прописанные здесь, автоматически запустятся при старте Termux или перезапуске системы.</p>
+                <textarea id="bashrcEditor" style="min-height: 480px;"></textarea>
+                <button onclick="saveBashrc()" style="margin-top:12px">💾 Сохранить конфигурацию автозапуска</button>
+            </div>
+        </section>
+    </div><!-- /.container -->
+
+    <!-- Toast Notification Container -->
+    <div id="toastContainer" class="toast-container"></div>
+
+    <!-- Custom Confirm / Alert Modal -->
+    <div id="confirmOverlay" class="overlay" style="display:none" onclick="closeConfirmModal(false)">
+        <div class="modal" onclick="event.stopPropagation()">
+            <h3 id="confirmModalTitle">Подтверждение</h3>
+            <p id="confirmModalMessage" style="color:var(--text-secondary);font-size:14px;line-height:1.5;margin-bottom:16px"></p>
+            <div class="modal-actions">
+                <button id="confirmModalBtnConfirm" onclick="closeConfirmModal(true)">Да</button>
+                <button id="confirmModalBtnCancel" class="btn-secondary" onclick="closeConfirmModal(false)">Отмена</button>
             </div>
         </div>
-
-    <!-- Вкладка 8: Службы -->
-<div id="services" class="tab-content">
-    <h2>🔌 Управление службами</h2>
-    <p style="color: #a8a8b3; font-size: 13px;">Запуск/остановка служб и настройка автозапуска.</p>
-    <div id="servicesContainer" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(420px,1fr));gap:16px;margin-top:16px;"></div>
-</div>
-
-<div id="metrics" class="tab-content">
-    <div class="links-header">
-        <h2>📊 Метрики и события</h2>
-        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-            <select id="metricsType" onchange="loadMetrics()" style="background:var(--bg-primary);border:1px solid var(--border);color:#fff;padding:6px 10px;border-radius:4px">
-                <option value="ram">RAM</option>
-                <option value="battery">Батарея</option>
-                <option value="storage">Хранилище</option>
-            </select>
-            <select id="metricsLimit" onchange="loadMetrics()" style="background:var(--bg-primary);border:1px solid var(--border);color:#fff;padding:6px 10px;border-radius:4px">
-                <option value="50">50 записей</option>
-                <option value="200" selected>200 записей</option>
-                <option value="1000">1000 записей</option>
-            </select>
-            <button onclick="loadMetrics()" style="margin:0">🔄</button>
-        </div>
-    </div>
-    <div id="metricsContainer" class="process-table-wrap" style="margin-bottom:20px">
-        <table class="log-table">
-            <thead id="metricsTableHead"></thead>
-            <tbody id="metricsTableBody"></tbody>
-        </table>
     </div>
 
-    <div class="links-header" style="margin-top:20px;flex-wrap:wrap;gap:10px">
-        <h3>📜 Журнал аудита и событий</h3>
-        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-            <select id="eventsSource" onchange="loadEvents()" style="background:var(--bg-primary);border:1px solid var(--border);color:#fff;padding:6px 10px;border-radius:4px">
-                <option value="">Все источники</option>
-                <option value="security">🛡 Безопасность</option>
-                <option value="actions">💻 Действия</option>
-                <option value="services">⚙ Службы</option>
-                <option value="telegram">✈ Telegram</option>
-                <option value="system">🖥 Система</option>
-                <option value="http">🌐 HTTP</option>
-            </select>
-            <select id="eventsLevel" onchange="loadEvents()" style="background:var(--bg-primary);border:1px solid var(--border);color:#fff;padding:6px 10px;border-radius:4px">
-                <option value="">Все уровни</option>
-                <option value="info">ℹ️ Info</option>
-                <option value="warn">⚠️ Warn</option>
-                <option value="error">❌ Error</option>
-            </select>
-            <input type="text" id="eventsQuery" placeholder="Поиск в событиях..." onkeydown="if(event.key==='Enter')loadEvents()" style="background:var(--bg-primary);border:1px solid var(--border);color:#fff;padding:6px 10px;border-radius:4px;width:160px">
-            <button onclick="loadEvents()" style="margin:0">🔄</button>
+    <!-- Custom Prompt Modal -->
+    <div id="promptOverlay" class="overlay" style="display:none" onclick="closePromptModal(null)">
+        <div class="modal" onclick="event.stopPropagation()">
+            <h3 id="promptModalTitle">Введите значение</h3>
+            <p id="promptModalMessage" style="color:var(--text-secondary);font-size:13px;margin-bottom:10px"></p>
+            <input type="text" id="promptModalInput" onkeydown="if(event.key==='Enter')closePromptModal(this.value)">
+            <div class="modal-actions">
+                <button onclick="closePromptModal(document.getElementById('promptModalInput').value)">OK</button>
+                <button class="btn-secondary" onclick="closePromptModal(null)">Отмена</button>
+            </div>
         </div>
     </div>
-    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:12px;background:var(--bg-secondary);padding:10px 14px;border-radius:6px;border:1px solid var(--border)">
-        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-            <span>💾 <b>База:</b> <span id="dbSizeLabel" style="font-family:monospace;color:var(--accent)">Загрузка...</span></span>
-            <select id="archiveSelector" onchange="onArchiveSelectionChange()" style="background:var(--bg-primary);border:1px solid var(--border);color:#fff;padding:4px 8px;border-radius:4px">
-                <option value="">🔥 Активная база (текущий месяц)</option>
-            </select>
-        </div>
-        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-            <span id="vacuumStatus" style="font-size:12px;color:var(--text-secondary)"></span>
-            <button id="archiveDownloadBtn" onclick="downloadSelectedArchive()" class="btn-sm" style="display:none;margin:0;background:var(--bg-hover);color:#fff">💾 Скачать</button>
-            <button id="archiveRestoreBtn" onclick="restoreSelectedArchive()" class="btn-sm" style="display:none;margin:0;background:#e67e22;color:#fff">♻️ Восстановить</button>
-            <button onclick="triggerArchiveCreation()" class="btn-sm" style="margin:0;background:var(--bg-hover);color:#fff" title="Упаковать прошлый месяц в архив">📦 В архив</button>
-            <button onclick="triggerMaintenance()" class="btn-sm" style="margin:0;background:var(--accent);color:#fff">🧹 VACUUM</button>
+
+    <!-- Image Preview Modal -->
+    <div id="imagePreviewOverlay" class="overlay" style="display:none" onclick="closeImagePreview()">
+        <div class="preview-wrap" onclick="event.stopPropagation()">
+            <div style="display:flex;justify-content:space-between;width:100%;align-items:center;margin-bottom:8px">
+                <span id="imagePreviewTitle" style="color:#fff;font-size:13px;font-family:monospace">Просмотр</span>
+                <button onclick="closeImagePreview()" class="btn-sm btn-secondary" style="margin:0">✕</button>
+            </div>
+            <img id="imagePreviewImg" src="" alt="Предпросмотр изображения">
         </div>
     </div>
-    <div id="eventsContainer" class="process-table-wrap">
-        <table class="log-table">
-            <thead><tr><th>Время</th><th>Источник</th><th>Тип</th><th>Детали</th><th>Уровень</th></tr></thead>
-            <tbody id="eventsTableBody"></tbody>
-        </table>
-    </div>
-</div>
-    </div><!-- /.container -->
 
     <!-- Telegram Settings Modal -->
     <div id="telegramOverlay" class="overlay" style="display:none">
@@ -314,15 +497,15 @@
             <div style="margin-bottom:12px">
                 <label style="display:block;font-size:12px;color:var(--text-secondary);margin-bottom:4px">Токен бота (@BotFather):</label>
                 <div style="display:flex;gap:6px">
-                    <input type="password" id="tgBotToken" placeholder="123456789:ABCdefGHI..." style="flex:1">
-                    <button type="button" onclick="toggleTgTokenVisibility()" style="margin:0;padding:6px 10px;background:var(--bg-hover);color:#fff">👁</button>
+                    <input type="password" id="tgBotToken" placeholder="123456789:ABCdefGHI..." style="flex:1;margin-bottom:0">
+                    <button type="button" onclick="toggleTgTokenVisibility()" class="btn-secondary" style="margin:0;padding:6px 12px">👁</button>
                 </div>
-                <small style="color:#888;font-size:11px">Маскированное значение не перезаписывается при сохранении.</small>
+                <small style="color:var(--text-muted);font-size:11px">Маскированное значение не перезаписывается при сохранении.</small>
             </div>
 
             <div style="margin-bottom:12px">
                 <label style="display:block;font-size:12px;color:var(--text-secondary);margin-bottom:4px">Chat ID (ваш ID или ID группы):</label>
-                <input type="text" id="tgChatId" placeholder="Например: 123456789" style="width:100%">
+                <input type="text" id="tgChatId" placeholder="Например: 123456789" style="margin-bottom:0">
             </div>
 
             <div style="margin-bottom:8px;display:flex;align-items:center;gap:8px">
@@ -345,9 +528,9 @@
             <div id="tgStatusMsg" style="font-size:13px;margin-bottom:12px;display:none"></div>
 
             <div class="modal-actions" style="display:flex;gap:8px">
-                <button type="button" onclick="testTelegramSettings()" id="tgTestBtn" style="background:#00bcd4;color:#fff;flex:1">🔔 Тест</button>
-                <button type="button" onclick="saveTelegramSettings()" id="tgSaveBtn" style="background:#4CAF50;color:#fff;flex:1">💾 Сохранить</button>
-                <button type="button" onclick="closeTelegramModal()" style="background:var(--bg-hover);color:#fff;flex:1">✕ Закрыть</button>
+                <button type="button" onclick="testTelegramSettings()" id="tgTestBtn" class="btn-secondary" style="flex:1">🔔 Тест</button>
+                <button type="button" onclick="saveTelegramSettings()" id="tgSaveBtn" style="flex:1">💾 Сохранить</button>
+                <button type="button" onclick="closeTelegramModal()" class="btn-secondary" style="flex:1">✕ Закрыть</button>
             </div>
         </div>
     </div>
@@ -356,8 +539,8 @@
     <div id="loginOverlay" class="overlay" style="display:none">
         <div class="modal" style="text-align:center">
             <h2 style="margin-bottom:8px">🔐 Требуется авторизация</h2>
-            <p style="color:var(--text-secondary);margin-bottom:16px;font-size:14px">Введите пароль для доступа к панели</p>
-            <input type="password" id="loginPassword" placeholder="Пароль" style="margin-bottom:12px" onkeydown="if(event.key==='Enter')submitLogin()">
+            <p style="color:var(--text-secondary);margin-bottom:16px;font-size:14px">Введите пароль для доступа к панели управления</p>
+            <input type="password" id="loginPassword" placeholder="Пароль администратора" style="margin-bottom:12px" onkeydown="if(event.key==='Enter')submitLogin()">
             <div class="modal-actions">
                 <button onclick="submitLogin()" style="flex:1">Войти</button>
             </div>

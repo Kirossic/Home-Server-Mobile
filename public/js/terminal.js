@@ -34,7 +34,7 @@ async function termExec(cmd) {
     initTerminalKeybindings();
     if (!cmd) {
         const input = document.getElementById('terminalInput');
-        cmd = input.value.trim();
+        cmd = input ? input.value.trim() : '';
         if (!cmd) return;
         input.value = '';
     }
@@ -43,8 +43,11 @@ async function termExec(cmd) {
     termHistoryIdx = termHistory.length;
 
     const output = document.getElementById('terminalOutput');
-    output.textContent += '\n$ ' + cmd + '\n';
-    output.scrollTop = output.scrollHeight;
+    if (output) {
+        output.textContent += '\n$ ' + cmd + '\n';
+        output.scrollTop = output.scrollHeight;
+    }
+
     try {
         const res = await authFetch('/api/terminal/exec', {
             method: 'POST',
@@ -52,17 +55,43 @@ async function termExec(cmd) {
             body: JSON.stringify({ cmd, cwd: currentPath || undefined })
         });
         const data = await res.json();
-        if (data.stdout) output.textContent += stripAnsi(data.stdout);
-        if (data.stderr) output.textContent += '\n[stderr] ' + stripAnsi(data.stderr);
-        if (data.exitCode && data.exitCode !== 0) output.textContent += '\n[Exit code: ' + data.exitCode + ']';
+        if (output) {
+            if (data.stdout) output.textContent += stripAnsi(data.stdout);
+            if (data.stderr) output.textContent += '\n[stderr] ' + stripAnsi(data.stderr);
+            if (data.exitCode && data.exitCode !== 0) output.textContent += '\n[Exit code: ' + data.exitCode + ']';
+        }
     } catch(e) {
-        output.textContent += '\n[Ошибка: ' + e.message + ']';
+        if (output) output.textContent += '\n[Ошибка: ' + e.message + ']';
     }
-    output.scrollTop = output.scrollHeight;
+
+    if (output) output.scrollTop = output.scrollHeight;
     const termInput = document.getElementById('terminalInput');
     if (termInput) termInput.focus();
 }
 
 function termClear() {
-    document.getElementById('terminalOutput').textContent = 'Добро пожаловать в Web Terminal. Нажмите ⏎ чтобы выполнить команду.';
+    const output = document.getElementById('terminalOutput');
+    if (output) {
+        output.textContent = 'Добро пожаловать в Web Terminal Redmi Server. Введите команду или выберите чип выше.';
+    }
+}
+
+function toggleTerminalFullscreen() {
+    const box = document.getElementById('terminalBox');
+    const btn = document.getElementById('termFsBtn');
+    if (!box) return;
+
+    box.classList.toggle('fullscreen');
+    if (btn) {
+        btn.textContent = box.classList.contains('fullscreen') ? '✕ Свернуть' : '⛶ Экран';
+    }
+}
+
+function copyTerminalOutput() {
+    const output = document.getElementById('terminalOutput');
+    if (!output || !output.textContent.trim()) {
+        showToast('Вывод терминала пуст', 'warn');
+        return;
+    }
+    copyToClipboard(output.textContent, 'Вывод терминала скопирован!');
 }

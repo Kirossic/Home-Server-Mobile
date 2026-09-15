@@ -1,0 +1,17 @@
+{
+  "name": "Redmi Home Server",
+  "short_name": "RedmiServer",
+  "description": "Панель управления домашним сервером Redmi A3",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#121214",
+  "theme_color": "#121214",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%231a1a1e'/><text y='.9em' x='5' font-size='80'>📱</text></svg>",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml"
+    }
+  ]
+}

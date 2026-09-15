@@ -45,6 +45,21 @@ async function handleServiceStop(req, res) {
   }
 }
 
+async function handleServiceRestart(req, res) {
+  try {
+    const { name } = req.body;
+    const svc = SERVICES[name];
+    if (!svc) return res.status(400).json({ error: 'Unknown service' });
+    await execCommand(svc.stopCmd);
+    await new Promise(r => setTimeout(r, 600));
+    await execCommand(svc.startCmd);
+    logEvent('service_restart', { service: name, label: svc.label });
+    setTimeout(() => res.json({ success: true }), 500);
+  } catch (e) {
+    res.status(400).json({ error: e.message });
+  }
+}
+
 async function handleServiceAutostart(req, res) {
   try {
     const { name, enabled } = req.body;
@@ -71,6 +86,7 @@ async function handleServiceAutostart(req, res) {
 router.get('/', handleServicesStatus);
 router.post('/start', handleServiceStart);
 router.post('/stop', handleServiceStop);
+router.post('/restart', handleServiceRestart);
 router.post('/autostart', handleServiceAutostart);
 
 module.exports = router;

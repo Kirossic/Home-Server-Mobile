@@ -6,7 +6,7 @@ const METRICS_COLUMNS = {
 
 const METRICS_LABELS = {
     ram: ['Время', 'Used (GB)', 'Total (GB)', 'Free (GB)', 'Load 1m', 'Load 5m', 'Load 15m'],
-    battery: ['Время', 'Заряд %', 'Статус', 'Темп.', 'mV', 'Здоровье', 'Циклы'],
+    battery: ['Время', 'Заряд %', 'Статус', 'Темп.', 'Напряжение', 'Здоровье', 'Циклы'],
     storage: ['Время', 'Точка монт.', 'Total (GB)', 'Used (GB)', 'Avail (GB)']
 };
 
@@ -14,20 +14,21 @@ let currentArchiveFile = '';
 
 function formatMetricsValue(type, col, val) {
     if (val === null || val === undefined) return '-';
-    if (col === 'voltage') return (val / 1000).toFixed(3) + 'V';
+    if (col === 'voltage') return (val / 1000).toFixed(3) + ' В';
     if (col === 'temperature') return val + '°C';
     if (['used_gb', 'total_gb', 'free_gb', 'avail_gb'].includes(col)) return parseFloat(val).toFixed(2);
     return val;
 }
 
 async function loadMetrics() {
-    const type = document.getElementById('metricsType').value;
-    const limit = document.getElementById('metricsLimit').value;
+    const type = document.getElementById('metricsType')?.value || 'ram';
+    const limit = document.getElementById('metricsLimit')?.value || '200';
     const thead = document.getElementById('metricsTableHead');
     const tbody = document.getElementById('metricsTableBody');
+    if (!thead || !tbody) return;
 
     thead.innerHTML = '<tr>' + METRICS_LABELS[type].map(h => '<th>' + h + '</th>').join('') + '</tr>';
-    tbody.innerHTML = '<tr><td colspan="' + METRICS_LABELS[type].length + '" style="text-align:center;color:var(--text-secondary)">Загрузка...</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="' + METRICS_LABELS[type].length + '" style="text-align:center;color:var(--text-secondary);padding:16px">Загрузка данных...</td></tr>';
 
     try {
         let url = '/api/metrics/' + type + '?limit=' + limit;
@@ -41,7 +42,7 @@ async function loadMetrics() {
         tbody.innerHTML = '';
 
         if (!data || data.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="' + METRICS_LABELS[type].length + '" style="text-align:center;color:var(--text-secondary)">Нет данных</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="' + METRICS_LABELS[type].length + '" style="text-align:center;color:var(--text-muted);padding:20px">Нет сохраненных метрик</td></tr>';
             return;
         }
 
@@ -52,7 +53,7 @@ async function loadMetrics() {
             tbody.appendChild(tr);
         });
     } catch(e) {
-        tbody.innerHTML = '<tr><td colspan="' + METRICS_LABELS[type].length + '" style="text-align:center;color:var(--danger)">Ошибка загрузки</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="' + METRICS_LABELS[type].length + '" style="text-align:center;color:var(--danger);padding:16px">Ошибка загрузки метрик</td></tr>';
     }
 }
 
@@ -114,7 +115,14 @@ function downloadSelectedArchive() {
 
 async function restoreSelectedArchive() {
     if (!currentArchiveFile) return;
-    if (!confirm(`Восстановить исторические данные из архива "${currentArchiveFile}" в текущую активную базу?`)) return;
+    const confirmed = await confirmModal({
+        title: 'Восстановление архива',
+        message: `Восстановить исторические данные из архива "${currentArchiveFile}" в текущую активную базу?`,
+        confirmText: 'Восстановить',
+        danger: false
+    });
+    if (!confirmed) return;
+
     const status = document.getElementById('vacuumStatus');
     if (status) status.textContent = '⏳ Восстановление...';
     try {
@@ -122,15 +130,18 @@ async function restoreSelectedArchive() {
         const data = await res.json();
         if (data.success) {
             if (status) status.textContent = '✅ Восстановлено!';
+            showToast('Архив успешно восстановлен в базу!', 'success');
             const sel = document.getElementById('archiveSelector');
             if (sel) sel.value = '';
             onArchiveSelectionChange();
             await loadDbStats();
         } else {
             if (status) status.textContent = 'Ошибка восстановления';
+            showToast('Ошибка восстановления архива', 'error');
         }
     } catch(e) {
         if (status) status.textContent = '❌ Ошибка';
+        showToast('Сбой сети при восстановлении архива', 'error');
     }
 }
 
@@ -142,8 +153,11 @@ async function triggerArchiveCreation() {
         const data = await res.json();
         if (data.success && data.archive) {
             if (status) status.textContent = `✅ Создан ${data.archive.filename} (${data.archive.sizeFormatted})`;
+            showToast(`Создан архив: ${data.archive.filename}`, 'success');
         } else {
-            if (status) status.textContent = data.message || 'Нет месяцев для архивации';
+            const msg = data.message || 'Нет прошлых месяцев для архивации';
+            if (status) status.textContent = msg;
+            showToast(msg, 'info');
         }
         await loadArchiveList();
         await loadDbStats();
@@ -151,19 +165,23 @@ async function triggerArchiveCreation() {
         await loadMetrics();
     } catch(e) {
         if (status) status.textContent = '❌ Ошибка';
+        showToast('Ошибка при архивации', 'error');
     }
 }
 
 async function triggerMaintenance() {
     const status = document.getElementById('vacuumStatus');
-    if (status) status.textContent = '⏳ Оптимизация и VACUUM...';
+    if (status) status.textContent = '⏳ VACUUM...';
     try {
         const res = await authFetch('/api/events/maintenance', { method: 'POST' });
         const data = await res.json();
         if (data.success && data.stats) {
-            if (status) status.textContent = `✅ Сжато: ${data.stats.startSize} → ${data.stats.endSize}`;
+            const resultMsg = `Сжато: ${data.stats.startSize} → ${data.stats.endSize}`;
+            if (status) status.textContent = `✅ ${resultMsg}`;
+            showToast(`База оптимизирована! ${resultMsg}`, 'success');
         } else {
             if (status) status.textContent = 'Готово';
+            showToast('Оптимизация базы завершена', 'success');
         }
         await loadArchiveList();
         await loadDbStats();
@@ -171,6 +189,7 @@ async function triggerMaintenance() {
         await loadMetrics();
     } catch(e) {
         if (status) status.textContent = '❌ Ошибка оптимизации';
+        showToast('Ошибка при оптимизации базы', 'error');
     }
 }
 
@@ -184,7 +203,7 @@ async function loadEvents() {
     const tbody = document.getElementById('eventsTableBody');
     if (!tbody) return;
 
-    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--text-secondary)">Загрузка...</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--text-secondary);padding:16px">Загрузка журнала...</td></tr>';
 
     try {
         let url = '/api/events?limit=200';
@@ -200,28 +219,36 @@ async function loadEvents() {
         tbody.innerHTML = '';
 
         if (!data.rows || data.rows.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--text-secondary)">Нет событий' + (currentArchiveFile ? ' в архиве' : '') + '</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--text-muted);padding:20px">Нет событий' + (currentArchiveFile ? ' в выбранном архиве' : '') + '</td></tr>';
             return;
         }
 
         data.rows.forEach(row => {
             const tr = document.createElement('tr');
-            const levelClass = row.level === 'error' ? 'log-error' : (row.level === 'warn' ? 'log-warn' : '');
+            let levelClass = 'log-info';
+            if (row.level === 'error') levelClass = 'log-error';
+            else if (row.level === 'warn') levelClass = 'log-warn';
+            else if (row.source === 'security') levelClass = 'log-badge.log-watch';
+
             let detail = row.detail || '';
             try { const parsed = JSON.parse(detail); detail = JSON.stringify(parsed); } catch(e) {}
 
-            const sourceBadge = '<span class="log-badge" style="opacity:0.8">' + escapeHtml(row.source || 'system') + '</span>';
-            const typeBadge = '<span class="log-badge ' + levelClass + '">' + escapeHtml(row.type) + '</span>';
+            const sourceBadge = `<span class="log-badge" style="background:var(--bg-hover);color:var(--text-secondary)">${escapeHtml(row.source || 'system')}</span>`;
+            const levelBadge = `<span class="log-badge ${levelClass}">${escapeHtml((row.level || 'info').toUpperCase())}</span>`;
 
-            tr.innerHTML = '<td>' + (row.ts || '') + '</td>' +
-                '<td>' + sourceBadge + '</td>' +
-                '<td>' + typeBadge + '</td>' +
-                '<td style="font-size:11px;max-width:350px;overflow:hidden;text-overflow:ellipsis;word-break:break-all">' + escapeHtml(detail) + '</td>' +
-                '<td>' + escapeHtml(row.level) + '</td>';
-            if (levelClass) tr.className = levelClass;
+            tr.innerHTML = `
+                <td style="color:var(--text-muted);white-space:nowrap">${escapeHtml(row.ts || '')}</td>
+                <td>${sourceBadge}</td>
+                <td style="font-weight:600">${escapeHtml(row.type)}</td>
+                <td style="font-size:11px;max-width:380px;overflow:hidden;text-overflow:ellipsis;word-break:break-all">${escapeHtml(detail)}</td>
+                <td>${levelBadge}</td>
+            `;
+            if (row.level === 'error') tr.className = 'log-error';
+            else if (row.level === 'warn') tr.className = 'log-warn';
+
             tbody.appendChild(tr);
         });
     } catch(e) {
-        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--danger)">Ошибка загрузки</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--danger);padding:16px">Ошибка загрузки событий</td></tr>';
     }
 }

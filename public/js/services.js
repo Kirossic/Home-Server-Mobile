@@ -3,33 +3,38 @@ async function loadServices() {
         const res = await authFetch('/api/services');
         const services = await res.json();
         const container = document.getElementById('servicesContainer');
+        if (!container) return;
         container.innerHTML = '';
+
         services.forEach(s => {
             const card = document.createElement('div');
-            card.className = 'card';
-            card.style.padding = '20px';
-            const statusColor = s.running ? '#04d361' : '#e53e3e';
-            const statusText = s.running ? 'Работает' : 'Остановлена';
-            const btnAction = s.running ? 'stop' : 'start';
-            const btnLabel = s.running ? '\u23f9 Остановить' : '\u25b6 Запустить';
-            const btnClass = s.running ? 'btn-stop' : 'btn-start';
+            card.className = 'service-card';
+
+            const isRunning = s.running;
+            const statusClass = isRunning ? 'running' : 'stopped';
+            const statusText = isRunning ? '🟢 Работает' : '🔴 Остановлена';
+            const btnAction = isRunning ? 'stop' : 'start';
+            const btnLabel = isRunning ? '⏹ Остановить' : '▶ Запустить';
+            const btnClass = isRunning ? 'btn-stop' : 'btn-start';
+
             card.innerHTML = `
-                <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px">
-                    <div>
-                        <h3 style="margin:0">${s.icon} ${s.label}</h3>
-                        <p style="margin:4px 0 0;font-size:13px;color:var(--text-secondary)">${s.desc}</p>
-                    </div>
-                    <div style="display:flex;align-items:center;gap:8px">
-                        <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${statusColor}"></span>
-                        <span style="font-size:13px;font-weight:bold;color:${statusColor}">${statusText}</span>
+                <div>
+                    <div class="service-top">
+                        <div>
+                            <h3 class="service-title">${s.icon || '⚡'} ${escapeHtml(s.label)}</h3>
+                            <p class="service-desc">${escapeHtml(s.desc)}</p>
+                        </div>
+                        <span class="service-status-pill ${statusClass}">${statusText}</span>
                     </div>
                 </div>
-                <div style="display:flex;gap:10px;align-items:center;margin-top:12px">
-                    <button class="service-btn ${btnClass}" onclick="toggleService('${s.id}', '${btnAction}')">${btnLabel}</button>
+
+                <div class="service-actions-row">
+                    <button class="service-btn ${btnClass}" onclick="toggleService('${s.id}', '${btnAction}', '${escapeHtml(s.label)}')">${btnLabel}</button>
+                    <button class="service-btn btn-service-restart" onclick="restartService('${s.id}', '${escapeHtml(s.label)}')">🔄 Перезапуск</button>
                     <div style="display:flex;align-items:center;gap:6px;margin-left:auto">
-                        <span style="font-size:13px;color:var(--text-secondary)">Автозапуск</span>
+                        <span style="font-size:12px;color:var(--text-secondary)">Автозапуск</span>
                         <label class="toggle-switch">
-                            <input type="checkbox" ${s.autostart ? 'checked' : ''} onchange="toggleAutostart('${s.id}', this.checked)">
+                            <input type="checkbox" ${s.autostart ? 'checked' : ''} onchange="toggleAutostart('${s.id}', this.checked, '${escapeHtml(s.label)}')">
                             <span class="toggle-slider"></span>
                         </label>
                     </div>
@@ -37,10 +42,15 @@ async function loadServices() {
             `;
             container.appendChild(card);
         });
-    } catch(e) { console.error('loadServices:', e); }
+    } catch(e) {
+        showToast('Ошибка загрузки списка служб', 'error');
+    }
 }
 
-async function toggleService(name, action) {
+async function toggleService(name, action, label) {
+    const actionText = action === 'start' ? 'Запуск' : 'Остановка';
+    showToast(`${actionText} службы ${label || name}...`, 'info', 2000);
+
     try {
         const res = await authFetch('/api/services/' + action, {
             method: 'POST',
@@ -48,24 +58,55 @@ async function toggleService(name, action) {
             body: JSON.stringify({ name })
         });
         if (res.ok) {
-            setTimeout(loadServices, 1500);
+            setTimeout(() => {
+                loadServices();
+                showToast(`Служба ${label || name} ${action === 'start' ? 'запущена' : 'остановлена'}`, 'success');
+            }, 800);
         } else {
             const data = await res.json();
-            alert('\u041e\u0448\u0438\u0431\u043a\u0430: ' + (data.error || '\u043d\u0435\u0438\u0437\u0432\u0435\u0441\u0442\u043d\u0430'));
+            showToast('Ошибка: ' + (data.error || 'не удалось переключить службу'), 'error');
         }
-    } catch(e) { alert('\u041e\u0448\u0438\u0431\u043a\u0430 \u0441\u0435\u0442\u0438'); }
+    } catch(e) {
+        showToast('Ошибка сети при переключении службы', 'error');
+    }
 }
 
-async function toggleAutostart(name, enabled) {
+async function restartService(name, label) {
+    showToast(`Перезапуск службы ${label || name}...`, 'info', 2000);
+    try {
+        const res = await authFetch('/api/services/restart', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name })
+        });
+        if (res.ok) {
+            setTimeout(() => {
+                loadServices();
+                showToast(`Служба ${label || name} успешно перезапущена`, 'success');
+            }, 800);
+        } else {
+            const data = await res.json();
+            showToast('Ошибка при перезапуске: ' + (data.error || 'сбой'), 'error');
+        }
+    } catch(e) {
+        showToast('Ошибка сети при перезапуске службы', 'error');
+    }
+}
+
+async function toggleAutostart(name, enabled, label) {
     try {
         const res = await authFetch('/api/services/autostart', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ name, enabled })
         });
-        if (!res.ok) {
-            alert('\u041e\u0448\u0438\u0431\u043a\u0430 \u043d\u0430\u0441\u0442\u0440\u043e\u0439\u043a\u0438 \u0430\u0432\u0442\u043e\u0437\u0430\u043f\u0443\u0441\u043a\u0430');
+        if (res.ok) {
+            showToast(`Автозапуск ${label || name}: ${enabled ? 'включен' : 'выключен'}`, 'success');
+        } else {
+            showToast('Ошибка настройки автозапуска', 'error');
             loadServices();
         }
-    } catch(e) { alert('\u041e\u0448\u0438\u0431\u043a\u0430 \u0441\u0435\u0442\u0438'); }
+    } catch(e) {
+        showToast('Ошибка сети при изменении автозапуска', 'error');
+    }
 }
