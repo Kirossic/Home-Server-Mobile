@@ -328,7 +328,7 @@
                     </label>
                 </div>
             </div>
-            <pre id="logOutput" class="terminal-output" style="min-height:420px;max-height:650px">Выберите лог-файл и нажмите 🔄</pre>
+            <div id="logOutput" class="terminal-output" style="min-height:420px;max-height:650px;white-space:pre-wrap">Выберите лог-файл и нажмите 🔄</div>
         </section>
 
         <!-- Вкладка 7: Процессы (Processes) -->
@@ -487,8 +487,8 @@
     </div>
 
     <!-- Telegram Settings Modal -->
-    <div id="telegramOverlay" class="overlay" style="display:none">
-        <div class="modal" style="max-width:440px">
+    <div id="telegramOverlay" class="overlay" style="display:none" onclick="closeTelegramModal()">
+        <div class="modal" style="max-width:440px" onclick="event.stopPropagation()">
             <h2 style="margin-bottom:8px">✈️ Настройка Telegram-бота</h2>
             <p style="color:var(--text-secondary);margin-bottom:16px;font-size:13px">
                 Бот автоматически отправляет новые ссылки на Панель и IDE при перезапуске туннелей, а также отвечает на команды /tunnels, /status и /restart_tunnels.

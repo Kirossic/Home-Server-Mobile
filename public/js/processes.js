@@ -97,7 +97,7 @@ function renderProcesses(processes) {
             <td style="font-weight:${cpuNum > 5 ? 'bold' : 'normal'}">${p.cpu}%</td>
             <td style="font-weight:${memNum > 5 ? 'bold' : 'normal'}">${p.mem}%</td>
             <td class="proc-cmd" title="${cmdEscaped}">${cmdEscaped}</td>
-            <td><button class="btn-kill" onclick="killProcess(${p.pid})">Kill</button></td>
+            <td><button class="btn-kill" onclick="killProcess('${p.pid}')">Kill</button></td>
         `;
         tbody.appendChild(tr);
     });

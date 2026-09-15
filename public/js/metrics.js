@@ -228,7 +228,7 @@ async function loadEvents() {
             let levelClass = 'log-info';
             if (row.level === 'error') levelClass = 'log-error';
             else if (row.level === 'warn') levelClass = 'log-warn';
-            else if (row.source === 'security') levelClass = 'log-badge.log-watch';
+            else if (row.source === 'security') levelClass = 'log-watch';
 
             let detail = row.detail || '';
             try { const parsed = JSON.parse(detail); detail = JSON.stringify(parsed); } catch(e) {}

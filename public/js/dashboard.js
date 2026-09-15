@@ -116,6 +116,9 @@ async function loadBattery(statsData = null) {
 }
 
 function drawRamChart() {
+    const container = document.getElementById('ramChartContainer');
+    if (container && container.style.display === 'none') return;
+
     const canvas = document.getElementById('ramChart');
     if (!canvas || ramHistory.length < 2) return;
 
@@ -191,6 +194,12 @@ function drawRamChart() {
 
 async function showMetric(type) {
     lastMetricType = type;
+    document.querySelectorAll('.stat-card').forEach(c => c.classList.remove('active-metric'));
+    if (typeof event !== 'undefined' && event) {
+        const card = event.currentTarget || (event.target && event.target.closest ? event.target.closest('.stat-card') : null);
+        if (card && card.classList) card.classList.add('active-metric');
+    }
+
     const fileList = document.querySelector('.file-list');
     const editorZone = document.querySelector('.editor-zone');
     const panel = document.getElementById('metricPanel');
@@ -296,6 +305,7 @@ async function showMetric(type) {
 }
 
 function closeMetric() {
+    document.querySelectorAll('.stat-card').forEach(c => c.classList.remove('active-metric'));
     const panel = document.getElementById('metricPanel');
     const fileList = document.querySelector('.file-list');
     const editorZone = document.querySelector('.editor-zone');

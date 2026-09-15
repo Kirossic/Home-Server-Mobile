@@ -45,6 +45,8 @@ function renderLogs() {
     const filterText = (document.getElementById('logSearchInput')?.value || '').toLowerCase().trim();
     if (!output) return;
 
+    output.style.whiteSpace = logRawMode ? 'pre-wrap' : 'normal';
+
     let lines = (logData || '').split('\n');
 
     if (filterText) {
