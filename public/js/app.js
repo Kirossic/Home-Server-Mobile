@@ -44,11 +44,18 @@ async function submitLogin() {
     } catch(e) { console.error('Login error', e); }
 }
 
-function switchTab(tabId) {
+function switchTab(tabId, btn) {
     document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
     document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
-    document.getElementById(tabId).classList.add('active');
-    event.target.classList.add('active');
+    const content = document.getElementById(tabId);
+    if (content) content.classList.add('active');
+
+    if (btn) {
+        btn.classList.add('active');
+    } else if (typeof event !== 'undefined' && event && event.target) {
+        const targetBtn = event.target.closest('.tab-btn') || event.target;
+        if (targetBtn && targetBtn.classList) targetBtn.classList.add('active');
+    }
 
     if (tabId === 'dashboard') {
         const saved = localStorage.getItem('dashboard_refresh_ms') || "3000";
@@ -59,15 +66,29 @@ function switchTab(tabId) {
         statsIntervalId = null;
     }
 
-    if (tabId === 'ide') loadProjectsForIDE();
-    if (tabId === 'logs') loadLogs();
-    if (tabId === 'autostart') loadBashrc();
-    if (tabId === 'services') loadServices();
-    if (tabId === 'metrics') { loadMetrics(); loadEvents(); }
+    if (tabId === 'links') {
+        if (typeof loadLinks === 'function') loadLinks();
+        if (typeof startLinkStatusRefresh === 'function') startLinkStatusRefresh();
+    }
+    if (tabId === 'ide' && typeof loadProjectsForIDE === 'function') loadProjectsForIDE();
+    if (tabId === 'logs' && typeof loadLogs === 'function') loadLogs();
+    if (tabId === 'processes' && typeof loadProcesses === 'function') loadProcesses();
+    if (tabId === 'terminal') {
+        if (typeof updateTermPrompt === 'function') updateTermPrompt();
+        if (typeof initTerminalKeybindings === 'function') initTerminalKeybindings();
+    }
+    if (tabId === 'autostart' && typeof loadBashrc === 'function') loadBashrc();
+    if (tabId === 'services' && typeof loadServices === 'function') loadServices();
+    if (tabId === 'metrics') {
+        if (typeof loadMetrics === 'function') loadMetrics();
+        if (typeof loadEvents === 'function') loadEvents();
+        if (typeof loadArchiveList === 'function') loadArchiveList();
+        if (typeof loadDbStats === 'function') loadDbStats();
+    }
 }
 
 function escapeHtml(str) {
-    return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    return (str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
 function updateTermPrompt() {
@@ -104,14 +125,7 @@ function initRefreshSettings() {
 window.addEventListener('DOMContentLoaded', () => {
     updateStats();
     initRefreshSettings();
-    loadFiles();
-    loadTunnelLinks();
-    updateTunnelLinks();
-    loadLinks();
-    startLinkStatusRefresh();
-    loadProcesses();
-    loadServices();
-    loadMetrics();
-    loadEvents();
-    setInterval(loadBattery, 60000);
+    if (typeof loadFiles === 'function') loadFiles();
+    if (typeof loadTunnelLinks === 'function') loadTunnelLinks();
+    if (typeof updateTunnelLinks === 'function') updateTunnelLinks();
 });

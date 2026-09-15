@@ -27,7 +27,7 @@ function toggleLogView() {
 function renderLogs() {
     const output = document.getElementById('logOutput');
     if (logRawMode) {
-        output.innerHTML = logData;
+        output.textContent = logData;
         return;
     }
     const lines = logData.split('\n').filter(Boolean);

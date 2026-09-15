@@ -10,11 +10,14 @@ const { logEvent } = require('../../services/events.service');
 
 async function handleFileSearch(req, res) {
     const query = req.query.query;
-    const dir = req.query.dir || os.homedir();
+    let dir = req.query.dir || os.homedir();
     if (!query || query.trim() === '') return res.json([]);
+    dir = path.resolve(dir);
+    if (!fs.existsSync(dir)) return res.status(400).json({ error: 'Directory not found' });
+    const safeDir = dir.replace(/(["\\$`])/g, '\\$1');
     const safe = query.replace(/[^a-zA-Z0-9._-]/g, '?');
     try {
-        const { stdout } = await execCommand('find "' + dir + '" -maxdepth 4 -iname "*' + safe + '*" -type f 2>/dev/null | head -50', { timeout: 10000 });
+        const { stdout } = await execCommand('find "' + safeDir + '" -maxdepth 4 -iname "*' + safe + '*" -type f 2>/dev/null | head -50', { timeout: 10000 });
         const files = stdout.trim().split('\n').filter(Boolean).map(f => ({ 
             fullPath: f, name: f.split('/').pop(), isDir: false 
         }));
@@ -83,13 +86,15 @@ async function handleFileUpload(req, res) {
     const targetDir = req.query.dir;
     const fileName = req.query.name;
     if (!targetDir || !fileName) return res.status(400).send('Missing dir or name');
-    const filePath = path.join(targetDir, fileName);
+    const safeFileName = path.basename(fileName);
+    const filePath = path.join(targetDir, safeFileName);
     try {
         await fs.promises.mkdir(targetDir, { recursive: true });
         const ws = fs.createWriteStream(filePath);
-        req.pipe(ws);
         await new Promise((resolve, reject) => {
-            req.on('end', resolve);
+            req.pipe(ws);
+            ws.on('finish', resolve);
+            ws.on('error', reject);
             req.on('error', reject);
         });
         logEvent('file_upload', { path: filePath }, 'info', 'actions');
@@ -119,40 +124,44 @@ async function handleFileDownloadDir(req, res) {
     }
 }
 
-function handleFileDelete(req, res) {
-    const targetPath = req.query.path;
-    fs.stat(targetPath, (err, stats) => {
-        if (err) return res.status(404).send('Not found');
-        const rmCmd = stats.isDirectory() ? 'rm -rf "' + targetPath + '"' : 'rm "' + targetPath + '"';
-        execCommand(rmCmd, (err) => {
-            if (err) {
-                logEvent('file_delete_error', { path: targetPath, error: err.message }, 'error', 'actions');
-                return res.status(500).send('Delete failed');
-            }
-            logEvent('file_delete', { path: targetPath }, 'info', 'actions');
-            res.send('Deleted');
-        });
-    });
-}
-
-function handleFileMkdir(req, res) {
+async function handleFileDelete(req, res) {
     const targetPath = req.query.path;
     if (!targetPath) return res.status(400).send('Missing path');
-    fs.mkdir(targetPath, { recursive: true }, (err) => {
-        if (err) return res.status(500).send('Mkdir failed');
+    try {
+        await fs.promises.stat(targetPath);
+        await fs.promises.rm(targetPath, { recursive: true, force: true });
+        logEvent('file_delete', { path: targetPath }, 'info', 'actions');
+        res.send('Deleted');
+    } catch (err) {
+        logEvent('file_delete_error', { path: targetPath, error: err.message }, 'error', 'actions');
+        res.status(err.code === 'ENOENT' ? 404 : 500).send('Delete failed');
+    }
+}
+
+async function handleFileMkdir(req, res) {
+    const targetPath = req.query.path;
+    if (!targetPath) return res.status(400).send('Missing path');
+    try {
+        await fs.promises.mkdir(targetPath, { recursive: true });
         logEvent('file_mkdir', { path: targetPath }, 'info', 'actions');
         res.send('Created');
-    });
+    } catch (err) {
+        logEvent('file_mkdir_error', { path: targetPath, error: err.message }, 'error', 'actions');
+        res.status(500).send('Mkdir failed');
+    }
 }
 
-function handleFileCreate(req, res) {
+async function handleFileCreate(req, res) {
     const targetPath = req.query.path;
     if (!targetPath) return res.status(400).send('Missing path');
-    fs.writeFile(targetPath, '', 'utf-8', (err) => {
-        if (err) return res.status(500).send('Create failed');
+    try {
+        await fs.promises.writeFile(targetPath, '', 'utf-8');
         logEvent('file_create', { path: targetPath }, 'info', 'actions');
         res.send('Created');
-    });
+    } catch (err) {
+        logEvent('file_create_error', { path: targetPath, error: err.message }, 'error', 'actions');
+        res.status(500).send('Create failed');
+    }
 }
 
 router.get('/search', handleFileSearch);

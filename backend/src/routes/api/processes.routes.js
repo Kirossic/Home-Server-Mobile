@@ -29,13 +29,27 @@ async function handleProcessList(req, res) {
     }
 }
 
+const { logEvent } = require('../../services/events.service');
+
 async function handleProcessKill(req, res) {
     try {
         const { pid } = req.body;
-        if (!pid) return res.status(400).json({ error: 'pid required' });
-        await execCommand(`kill ${parseInt(pid)}`, { timeout: 5000 });
-        res.json({ success: true });
+        const targetPid = parseInt(pid, 10);
+        if (!targetPid || isNaN(targetPid) || targetPid <= 1) {
+            return res.status(400).json({ error: 'Недопустимый PID' });
+        }
+        if (targetPid === process.pid) {
+            return res.status(400).json({ error: 'Нельзя завершить собственный процесс сервера' });
+        }
+        const { exitCode } = await execCommand(`kill ${targetPid}`, { timeout: 5000 });
+        if (exitCode === 0) {
+            logEvent('process_kill', { pid: targetPid }, 'warn', 'security');
+            res.json({ success: true });
+        } else {
+            res.status(400).json({ error: 'Не удалось завершить процесс (PID не существует или нет прав)' });
+        }
     } catch (error) {
+        logEvent('process_kill_error', { pid: req.body && req.body.pid, error: error.message }, 'error', 'security');
         res.status(500).json({ error: 'Failed to kill process' });
     }
 }

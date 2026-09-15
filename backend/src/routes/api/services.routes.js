@@ -8,11 +8,12 @@ const { logEvent } = require('../../services/events.service');
 
 async function handleServicesStatus(req, res) {
   const results = [];
+  let bashrc = '';
+  try { bashrc = fs.readFileSync(BASHRC_PATH, 'utf-8'); } catch(e) {}
+
   for (const s of Object.values(SERVICES)) {
     const { exitCode } = await execCommand(s.checkCmd);
     const running = exitCode === 0;
-    let bashrc = '';
-    try { bashrc = fs.readFileSync(BASHRC_PATH, 'utf-8'); } catch(e) {}
     const autostart = bashrc.includes('#service-' + s.id);
     results.push({ id: s.id, label: s.label, desc: s.desc, icon: s.icon, running, autostart });
   }

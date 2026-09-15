@@ -1,7 +1,9 @@
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
-const dns = require('dns').promises;
+const dns = require('dns');
+try { dns.setDefaultResultOrder('ipv4first'); } catch (e) {}
+const dnsPromises = dns.promises;
 const { execCommand } = require('../utils/exec');
 
 const panelLogPath = path.join(os.homedir(), 'panel_tunnel.log');
@@ -36,8 +38,8 @@ function extractUrlFromLog(filePath) {
 async function isInternetAvailable() {
     try {
         await Promise.race([
-            dns.lookup('one.one.one.one'),
-            dns.lookup('google.com'),
+            dnsPromises.lookup('one.one.one.one'),
+            dnsPromises.lookup('google.com'),
             fetch('https://1.1.1.1', { method: 'HEAD', signal: AbortSignal.timeout(5000) }),
         ]);
         return true;
@@ -90,11 +92,24 @@ async function sendAlertIfConfigured(text) {
     }
 }
 
+function getPanelPassword() {
+    if (process.env.PANEL_PW) return process.env.PANEL_PW;
+    try {
+        const { PANEL_PASSWORD } = require('../config/constants');
+        if (PANEL_PASSWORD) return PANEL_PASSWORD;
+    } catch (e) {}
+    return '';
+}
+
 async function reportEventToPanel(type, detail, level = 'info') {
     try {
+        const headers = { 'Content-Type': 'application/json' };
+        const pw = getPanelPassword();
+        if (pw) headers['x-panel-pw'] = pw;
+
         await fetch('http://127.0.0.1:8080/api/events', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers,
             body: JSON.stringify({ type, detail, level, source: 'watchdog' }),
             signal: AbortSignal.timeout(3000)
         });

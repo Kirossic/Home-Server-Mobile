@@ -17,7 +17,15 @@ async function runMaintenance() {
   };
 
   try {
-    // 1. Roll-up RAM metrics older than 3 days into hourly averages
+    // 1. Auto-archive any completed months into cold storage BEFORE purging old data
+    try {
+      const { autoArchiveCompletedMonths } = require('./archive.service');
+      await autoArchiveCompletedMonths();
+    } catch (e) {
+      console.error('[maintenance] Ошибка авто-архивации месяцев:', e.message);
+    }
+
+    // 2. Roll-up RAM metrics older than 3 days into hourly averages
     db.run("DROP TABLE IF EXISTS ram_rollup;");
     db.run(`
       CREATE TEMP TABLE ram_rollup AS
@@ -42,7 +50,7 @@ async function runMaintenance() {
     db.run("DROP TABLE IF EXISTS ram_rollup;");
     db.run("DELETE FROM metrics_ram WHERE ts < datetime('now', 'localtime', '-30 days');");
 
-    // 2. Roll-up Battery metrics older than 3 days into hourly averages
+    // 3. Roll-up Battery metrics older than 3 days into hourly averages
     db.run("DROP TABLE IF EXISTS battery_rollup;");
     db.run(`
       CREATE TEMP TABLE battery_rollup AS
@@ -67,7 +75,7 @@ async function runMaintenance() {
     db.run("DROP TABLE IF EXISTS battery_rollup;");
     db.run("DELETE FROM metrics_battery WHERE ts < datetime('now', 'localtime', '-30 days');");
 
-    // 3. Roll-up Storage metrics older than 3 days into hourly averages per mount
+    // 4. Roll-up Storage metrics older than 3 days into hourly averages per mount
     db.run("DROP TABLE IF EXISTS storage_rollup;");
     db.run(`
       CREATE TEMP TABLE storage_rollup AS
@@ -91,20 +99,12 @@ async function runMaintenance() {
     db.run("DELETE FROM metrics_storage WHERE ts < datetime('now', 'localtime', '-30 days');");
     db.run("DELETE FROM metrics_storage WHERE mount LIKE '/apex/%' OR mount LIKE '/bootstrap-apex/%' OR mount LIKE '/system/%' OR mount LIKE '/vendor/%' OR mount LIKE '/product/%' OR mount = '/';");
 
-    // 4. Purge old Events: info older than 14 days, warn/error older than 30 days
+    // 5. Purge old Events: info older than 14 days, warn/error older than 30 days
     db.run("DELETE FROM events WHERE level = 'info' AND ts < datetime('now', 'localtime', '-14 days');");
     db.run("DELETE FROM events WHERE ts < datetime('now', 'localtime', '-30 days');");
 
-    // 5. Purge HTTP logs older than 7 days
+    // 6. Purge HTTP logs older than 7 days
     db.run("DELETE FROM http_logs WHERE ts < datetime('now', 'localtime', '-7 days');");
-
-    // 6. Auto-archive any completed months into cold storage
-    try {
-      const { autoArchiveCompletedMonths } = require('./archive.service');
-      await autoArchiveCompletedMonths();
-    } catch (e) {
-      console.error('[maintenance] Ошибка авто-архивации месяцев:', e.message);
-    }
 
     // 7. Run VACUUM & flush immediately
     const endSize = vacuumDb();

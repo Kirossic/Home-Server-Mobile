@@ -48,10 +48,27 @@ async function loadBattery() {
     try {
         const res = await authFetch('/api/battery');
         const b = await res.json();
-        if (b.percentage !== undefined) {
-            const icon = b.status.toUpperCase() === 'CHARGING' ? '⚡' : (b.percentage > 50 ? '🔋' : '🪫');
-            document.getElementById('batteryLevel').innerText = b.percentage + '%';
-            document.getElementById('batteryStatus').innerText = icon + ' ' + (b.status.toUpperCase() === 'CHARGING' ? '\u0417\u0430\u0440\u044f\u0436\u0430\u0435\u0442\u0441\u044f' : '\u0420\u0430\u0437\u0440\u044f\u0436\u0430\u0435\u0442\u0441\u044f');
+        const pct = b.percentage !== undefined ? b.percentage : b.level;
+        if (pct !== undefined && pct !== null) {
+            const rawStatus = (b.status || '').toUpperCase();
+            const rawPlugged = (b.plugged || '').toUpperCase();
+            const isPlugged = rawPlugged.startsWith('PLUGGED') && rawPlugged !== 'UNPLUGGED';
+            const isFull = rawStatus === 'FULL' || (pct >= 100 && isPlugged);
+            const isCharging = rawStatus === 'CHARGING';
+
+            let modeText = 'Разряжается';
+            let icon = pct > 50 ? '🔋' : '🪫';
+
+            if (isFull && isPlugged) {
+                modeText = 'Заряжена (сеть)';
+                icon = '🟢';
+            } else if (isCharging || isPlugged) {
+                modeText = rawPlugged.includes('USB') ? 'Зарядка (USB)' : 'Заряжается';
+                icon = '⚡';
+            }
+
+            document.getElementById('batteryLevel').innerText = pct + '%';
+            document.getElementById('batteryStatus').innerText = icon + ' ' + modeText;
         }
     } catch(e) {
         document.getElementById('batteryLevel').innerText = '-';
